@@ -1,0 +1,106 @@
+﻿@model IEnumerable<BlockChain_FP_ITStep.Models.BlockValidationViewModel>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+
+<h1>Index</h1>
+
+@if (ViewBag.IsChainValid == true)
+{
+    <div class="alert alert-success" role="alert">
+        Blockchain is valid
+    </div>
+}
+else
+{
+    <div class="alert alert-danger" role="alert">
+        Blockchain integrity compromised!
+    </div>
+}
+
+
+<div class="mb-3">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <!-- add block -->
+            <form method="post" asp-action="Add">
+                <div class="input-group">
+                    <input type="text" name="data" class="form-control" placeholder="Enter block data" required />
+                    <button type="submit" class="btn btn-success">Add block</button>
+                </div>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <!-- search blcock by hash -->
+            <form method="get" asp-action="SearchByHash">
+                <div class="input-group">
+                    <input type="text" name="hash" class="form-control" placeholder="Search by hash..." />
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@* <p>
+    <a asp-action="Create">Create New</a>
+</p> *@
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Block.Index)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Block.Data)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Block.PrevHash)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Block.Hash)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Block.Timestamp)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @{
+            var blockList = Model.ToList();
+        }
+        @for (int i = 0; i < blockList.Count; i++)
+        {
+            var item = blockList[i];
+            bool isValid = item.IsValid;
+            var rowClass = isValid ? "table-success" : "table-danger";
+            <tr class="@rowClass">
+                <td>
+                    @Html.DisplayFor(modelItem => item.Block.Index)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Block.Data)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Block.PrevHash)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Block.Hash)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Block.Timestamp)
+                </td>
+                <td>
+                    @Html.ActionLink("Edit", "Edit", new { index = item.Block.Index }) |
+                    @Html.ActionLink("Details", "Details", new { /* id=item.PrimaryKey */ }) |
+                    @Html.ActionLink("Delete", "Delete", new { /* id=item.PrimaryKey */ })
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

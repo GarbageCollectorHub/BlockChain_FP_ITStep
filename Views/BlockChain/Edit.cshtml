@@ -1,0 +1,10 @@
+﻿<h2>Edit Block</h2>
+
+<form asp-action="Edit" method="post">
+    <input type="hidden" name="index" value="@Model.Index" />
+    <div>
+        <label>Block Data:</label>
+        <input type="text" name="data" value="@Model.Data" />
+    </div>
+    <button type="submit">Save</button>
+</form>
