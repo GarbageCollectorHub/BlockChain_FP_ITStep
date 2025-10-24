@@ -1,10 +1,22 @@
-﻿<h2>Edit Block</h2>
+﻿@model BlockChain_FP_ITStep.Models.Block
+
+<h2>Edit Block</h2>
 
 <form asp-action="Edit" method="post">
     <input type="hidden" name="index" value="@Model.Index" />
-    <div>
-        <label>Block Data:</label>
-        <input type="text" name="data" value="@Model.Data" />
+
+    <!-- data  -->
+    <div class="mb-3">
+        <label class="form-label">Block Data:</label>
+        <input type="text" name="data" class="form-control" value="@Model.Data" />
     </div>
-    <button type="submit">Save</button>
+
+    <!-- signature  -->
+    <div class="mb-3">        
+        <label class="form-label">Signature:</label>
+        <input type="text" name="signature" class="form-control" value="@Model.Signature" />
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
 </form>

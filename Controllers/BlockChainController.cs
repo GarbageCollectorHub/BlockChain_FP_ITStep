@@ -31,9 +31,9 @@ namespace BlockChain_FP_ITStep.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Edit(int index, string data)
+        public async Task<IActionResult> Edit(int index, string data, string signature)
         {
-            var result = await _bcService.EditBlockAsync(index, data);
+            var result = await _bcService.EditBlockAsync(index, data, signature);
             if (!result) return NotFound();
             return RedirectToAction(nameof(Index));
         }
@@ -46,8 +46,7 @@ namespace BlockChain_FP_ITStep.Controllers
                 return RedirectToAction(nameof(Index));
 
             var blocks = await _bcService.GetAllBlocksAsync();
-            var found = blocks.FirstOrDefault(b =>
-                b.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase)); // точное совпадение по хэшу
+            var found = blocks.FirstOrDefault(b => b.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));    //  Ordinal -> Сравнивает побайтово символы, без учёта языка и культуры.  + IgnoreCase
 
             if (found == null)
             {

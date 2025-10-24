@@ -14,7 +14,11 @@ namespace BlockChain_FP_ITStep.Models
         public string PrevHash { get; set; }
         public string Hash { get; set; }
         public DateTime Timestamp { get; set; }
+ 
+        public string Signature { get; private set; }    // Подпись блока 
+        public string PublicKeyXml { get; private set; }    
 
+        // ------------- //
         public Block() { }
 
         public Block(int index, string data, string prevHash)
@@ -36,5 +40,45 @@ namespace BlockChain_FP_ITStep.Models
             byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
             return BitConverter.ToString(bytes).Replace("-", "");
         }
+
+        // ====  L2 ===
+        public void Sign(RSAParameters privateKey, string publicKey)      // функция подписи
+        {
+            var rsa = RSA.Create();
+            rsa.ImportParameters(privateKey);
+            byte[] data = Encoding.UTF8.GetBytes(Hash);
+            byte[] sig = rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            Signature = Convert.ToBase64String(sig);
+            PublicKeyXml = publicKey;
+        }
+
+        public bool Verify(RSAParameters publicKey)
+        {
+            if(String.IsNullOrWhiteSpace(Signature)) return false;
+
+            try
+            {
+                var rsa = RSA.Create();
+                rsa.FromXmlString(PublicKeyXml);
+                byte[] data = Encoding.UTF8.GetBytes(Hash);
+                byte[] sig = Convert.FromBase64String(Signature);
+                return rsa.VerifyData(data, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex);
+                return false;
+            }
+
+        }
+
+        public void UpdateSignature(string newSignature)
+        {
+            Signature = newSignature;
+        }
+
+
+
     }
 }

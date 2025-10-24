@@ -1,6 +1,7 @@
 ﻿using BlockChain_FP_ITStep.Data;
 using BlockChain_FP_ITStep.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace BlockChain_FP_ITStep.Services
 {
@@ -8,9 +9,22 @@ namespace BlockChain_FP_ITStep.Services
     {
         private readonly ApplicationDbContext _db;
 
+        private readonly RSAParameters _privateKey;
+        private readonly RSAParameters _publicKey;
+        private readonly string _publicKeyXml;
+
+
         public BlockChainService(ApplicationDbContext db)
         {
             _db = db;
+           
+             var rsa = RSA.Create();
+            _privateKey = rsa.ExportParameters(true);
+            _publicKey = rsa.ExportParameters(false);
+            _publicKeyXml = rsa.ToXmlString(false);
+            // ===
+
+
             InitGenBlock();
         }
 
@@ -19,6 +33,8 @@ namespace BlockChain_FP_ITStep.Services
             if (!_db.Blocks.Any())
             {
                 var genBlock = new Block(0, "Genesis-block", "");
+                genBlock.Sign(_privateKey, _publicKeyXml);
+
                 _db.Blocks.Add(genBlock);
                 _db.SaveChanges();
             }
@@ -38,6 +54,7 @@ namespace BlockChain_FP_ITStep.Services
             if (prevBlock == null) return;
 
             var newBlock = new Block(blocks.Count, data, prevBlock.Hash);
+            newBlock.Sign(_privateKey, _publicKeyXml);
             _db.Blocks.Add(newBlock);
             await _db.SaveChangesAsync();
         }
@@ -47,12 +64,16 @@ namespace BlockChain_FP_ITStep.Services
             return await _db.Blocks.FirstOrDefaultAsync(b => b.Index == index);
         }
 
-        public async Task<bool> EditBlockAsync(int index, string data)
+        public async Task<bool> EditBlockAsync(int index, string data, string? signature = null)
         {
             var block = await GetBlockByIndexAsync(index);
             if (block == null) return false;
 
             block.Data = data;
+            if (!string.IsNullOrWhiteSpace(signature))
+            {
+                block.UpdateSignature(signature);
+            }          
             block.Hash = block.ComputeHash();
 
             _db.Blocks.Update(block);
@@ -71,6 +92,7 @@ namespace BlockChain_FP_ITStep.Services
 
                 if (current.PrevHash != prevBlock.Hash) return false;
                 if (current.Hash != current.ComputeHash()) return false;
+                if (!current.Verify(_publicKey)) return false;
             }
             return true;
         }
@@ -90,7 +112,7 @@ namespace BlockChain_FP_ITStep.Services
                     var prev = blocks[i - 1];
                     if (stillValid)
                     {
-                        if (blocks[i].PrevHash != prev.Hash)
+                        if (blocks[i].PrevHash != prev.Hash || !blocks[i].Verify(_publicKey))
                         {
                             stillValid = false;
                             isValid = false;
@@ -113,6 +135,9 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
+        //  === L2 ===
+
+        
 
 
 

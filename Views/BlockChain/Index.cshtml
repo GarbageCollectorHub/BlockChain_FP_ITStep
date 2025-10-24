@@ -21,6 +21,14 @@ else
 }
 
 
+@if (ViewBag.SearchMessage != null)
+{
+    <div class="alert alert-warning mt-3" role="alert">
+        @ViewBag.SearchMessage
+    </div>
+}
+
+
 <div class="mb-3">
     <div class="row g-3">
         <div class="col-md-6">
@@ -45,6 +53,10 @@ else
 </div>
 
 
+
+
+
+
 @* <p>
     <a asp-action="Create">Create New</a>
 </p> *@
@@ -66,6 +78,9 @@ else
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Block.Timestamp)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Block.Signature)
             </th>
             <th></th>
         </tr>
@@ -94,6 +109,9 @@ else
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.Block.Timestamp)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Block.Signature)
                 </td>
                 <td>
                     @Html.ActionLink("Edit", "Edit", new { index = item.Block.Index }) |
