@@ -91,6 +91,11 @@ namespace BlockChain_FP_ITStep.Services
             return await _db.Blocks.FirstOrDefaultAsync(b => b.Index == index);
         }
 
+        public async Task<Block?> GetBlockByIdAsync(int id)
+        {
+            return await _db.Blocks.FirstOrDefaultAsync(b => b.Id == id);
+        }
+
 
         public async Task<bool> EditBlockAsync(int index, string data, string? signature = null)
         {

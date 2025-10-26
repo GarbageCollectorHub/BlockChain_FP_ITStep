@@ -104,5 +104,15 @@ namespace BlockChain_FP_ITStep.Controllers
 
             return View(found);
         }
+
+
+        [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var block = await _bcService.GetBlockByIdAsync(id);
+            if (block == null) return NotFound();
+            return View(block);
+        }
+
     }
 }

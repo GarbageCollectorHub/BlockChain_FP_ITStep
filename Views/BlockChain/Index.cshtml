@@ -135,7 +135,7 @@ else
 
                 <td>
                     @Html.ActionLink("Edit", "Edit", new { index = item.Block.Index }) |
-                    @Html.ActionLink("Details", "Details", new { /* id=item.PrimaryKey */ }) |
+                    @Html.ActionLink("Details", "Details", new { id = item.Block.Id }) |
                     @Html.ActionLink("Delete", "Delete", new { /* id=item.PrimaryKey */ })
                 </td>
             </tr>
