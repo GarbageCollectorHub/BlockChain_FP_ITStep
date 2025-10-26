@@ -52,10 +52,9 @@ namespace BlockChain_FP_ITStep.Models
             PublicKeyXml = publicKey;
         }
 
-        public bool Verify(RSAParameters publicKey)
+        public bool Verify()
         {
             if(String.IsNullOrWhiteSpace(Signature)) return false;
-
             try
             {
                 var rsa = RSA.Create();

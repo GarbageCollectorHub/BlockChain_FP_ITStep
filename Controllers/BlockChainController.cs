@@ -1,4 +1,5 @@
-﻿using BlockChain_FP_ITStep.Services;
+﻿using BlockChain_FP_ITStep.Models;
+using BlockChain_FP_ITStep.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlockChain_FP_ITStep.Controllers
@@ -9,18 +10,63 @@ namespace BlockChain_FP_ITStep.Controllers
 
         public async Task<IActionResult> Index()
         {
+            ViewBag.AlertMessage = TempData["AlertMessage"];
+            ViewBag.AlertType = TempData["AlertType"];
+
             var validatedBlocks = await _bcService.GetValidatedBlocksAsync();
-            ViewBag.IsChainValid = await _bcService.IsValidAsync();
-            return View(validatedBlocks);
+            var isSignatureValid = await _bcService.GetSignatureValidationAsync();
+
+            var model = validatedBlocks.Select((block, i) => new BlockValidationViewModel
+            {
+                Block = block.Block,
+                IsValid = block.IsValid,                        // цепочка
+                IsSignatureValid = isSignatureValid[i].IsValid  // подпись
+            }).ToList();
+
+            ViewBag.IsChainValid = model.All(b => b.IsValid);
+
+            return View(model);
         }
+
 
 
         [HttpPost]
-        public async Task<IActionResult> Add(string data)
+        public async Task<IActionResult> Add(string data, string privateKey)
         {
-            await _bcService.AddBlockAsync(data);
-            return RedirectToAction(nameof(Index));
+            if (string.IsNullOrWhiteSpace(data) || string.IsNullOrWhiteSpace(privateKey))
+            {
+                TempData["AlertMessage"] = "Please enter both data and private key.";
+                TempData["AlertType"] = "danger";
+                return RedirectToAction(nameof(Index));
+            }
+
+            try
+            {
+                await _bcService.AddBlockAsync(data, privateKey);
+                TempData["AlertMessage"] = "Block successfully added.";
+                TempData["AlertType"] = "success";
+            }
+            catch (Exception ex)
+            {
+                TempData["AlertMessage"] = "Error: " + ex.Message;
+                TempData["AlertType"] = "danger";
+            }
+
+            return RedirectToAction("Index");
         }
+
+        // маршрут для генерации ключа
+        [HttpGet]
+        public IActionResult GenerateKey()
+        {
+            var privateKey = _bcService.GeneratePrivateKeyXml();
+            if (string.IsNullOrWhiteSpace(privateKey))
+                return BadRequest("Error generating key");
+
+            return Content(privateKey, "text/plain");
+        }
+
+
 
         [HttpGet]
         public async Task<IActionResult> Edit(int index)
