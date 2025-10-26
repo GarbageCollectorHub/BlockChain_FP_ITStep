@@ -11,7 +11,7 @@
             </div>
 
             <div class="modal-body">
-                <!-- Заголовок с кнопкой Copy -->
+                <!-- Copy -->
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <small class="text-muted">Key</small>
                     <button type="button"
@@ -27,7 +27,7 @@
                     </button>
                 </div>
 
-                <!-- Textarea без кнопки внутри -->
+                <!-- Textarea -->
                 <textarea id="privateKeyBox"
                           class="form-control w-100"
                           rows="20"
@@ -73,7 +73,7 @@
         try {
             await navigator.clipboard.writeText(textarea.value);
 
-            // Меняем на "Copied" с галочкой
+            // Меняем на "Copied" с галочкой и обратно
             btn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 3px;">
                     <path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"/>
@@ -83,7 +83,6 @@
             btn.classList.remove('btn-outline-secondary');
             btn.classList.add('btn-success');
 
-            // Через 2 секунды возвращаем обратно
             setTimeout(() => {
                 btn.innerHTML = `
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: middle; margin-right: 3px;">

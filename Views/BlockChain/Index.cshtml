@@ -37,18 +37,11 @@ else
             <!-- add block -->
             <form method="post" asp-action="Add" novalidate>
                 <div class="input-group">
-                    <!-- Ввод данных блока -->
                     <input type="text" name="data" class="form-control" placeholder="Enter block data" required />
-
-                    <!-- Ввод приватного ключа -->
                     <input type="password" id="privateKeyInput" name="privateKey" class="form-control" placeholder="Enter private key" required />
-
-                    <!-- Кнопка-глаз для показа/скрытия -->
                     <button class="btn btn-outline-secondary" type="button" id="toggleKeyBtn">
                         <i class="bi bi-eye"></i>
                     </button>
-
-                    <!-- Кнопка добавления блока -->
                     <button type="submit" class="btn btn-success">Add block</button>
                 </div>
             </form>
@@ -102,6 +95,7 @@ else
             var item = blockList[i];
             bool isValid = item.IsValid;
             var rowClass = isValid ? "table-success" : "table-danger";
+
             <tr class="@rowClass">
                 <td>
                     @Html.DisplayFor(modelItem => item.Block.Index)
@@ -109,12 +103,19 @@ else
                 <td>
                     @Html.DisplayFor(modelItem => item.Block.Data)
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Block.PrevHash)
+                <!--  PrevHash -->
+                <td title="@item.Block.PrevHash" onclick="copyToClipboard('@item.Block.PrevHash')" style="cursor:pointer;">
+                    @(item.Block.PrevHash?.Length > 16
+                                    ? item.Block.PrevHash.Substring(0, 16) + "..."
+                                    : item.Block.PrevHash)
                 </td>
-                <td>
-                    @Html.DisplayFor(modelItem => item.Block.Hash)
+                <!--  Hash -->
+                <td title="@item.Block.Hash" onclick="copyToClipboard('@item.Block.Hash')" style="cursor:pointer;">
+                    @(item.Block.Hash?.Length > 16
+                                    ? item.Block.Hash.Substring(0, 16) + "..."
+                                    : item.Block.Hash)
                 </td>
+
                 <td>
                     @Html.DisplayFor(modelItem => item.Block.Timestamp)
                 </td>
