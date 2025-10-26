@@ -37,8 +37,18 @@ else
             <!-- add block -->
             <form method="post" asp-action="Add" novalidate>
                 <div class="input-group">
+                    <!-- Ввод данных блока -->
                     <input type="text" name="data" class="form-control" placeholder="Enter block data" required />
-                    <input type="text" name="privateKey" class="form-control" placeholder="Paste your private key here" required />
+
+                    <!-- Ввод приватного ключа -->
+                    <input type="password" id="privateKeyInput" name="privateKey" class="form-control" placeholder="Enter private key" required />
+
+                    <!-- Кнопка-глаз для показа/скрытия -->
+                    <button class="btn btn-outline-secondary" type="button" id="toggleKeyBtn">
+                        <i class="bi bi-eye"></i>
+                    </button>
+
+                    <!-- Кнопка добавления блока -->
                     <button type="submit" class="btn btn-success">Add block</button>
                 </div>
             </form>
@@ -192,6 +202,21 @@ else
                 .then(() => showToast("Signature copied to clipboard."))
                 .catch(() => showToast("Failed to copy", true));
         }
+
+        // пееключатель видимости для приватного ключа
+        document.getElementById('toggleKeyBtn').addEventListener('click', function () {
+            const input = document.getElementById('privateKeyInput');
+            const icon = this.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
+            }
+        });
+
 
     </script>
 }
