@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Security.Cryptography;
+using System.Diagnostics;
 
 namespace BlockChain_FP_ITStep.Models
 {
@@ -18,6 +19,11 @@ namespace BlockChain_FP_ITStep.Models
         public string Signature { get; private set; }    // Подпись блока 
         public string PublicKeyXml { get; private set; }    
 
+        // l3 -> PoW
+        public int Nonce { get; set; }
+        public int Difficulty {  get; set; }
+        public long MiningDurationMs { get; set; }
+
         // ------------- //
         public Block() { }
 
@@ -34,7 +40,7 @@ namespace BlockChain_FP_ITStep.Models
         public string ComputeHash()
         {
             var ts = new DateTime(Timestamp.Ticks - (Timestamp.Ticks % TimeSpan.TicksPerMillisecond), DateTimeKind.Utc); // Округляем время до миллисекунд, чтобы совпадало с точностью SQL и хэш не менялся после сохранения
-            var raw = Index + Data + PrevHash + ts.ToString("O");
+            var raw = Index + Data + PrevHash + ts.ToString("O") + Nonce + Difficulty;
 
             using var sha = SHA256.Create();
             byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
@@ -75,6 +81,29 @@ namespace BlockChain_FP_ITStep.Models
         public void UpdateSignature(string newSignature)
         {
             Signature = newSignature;
+        }
+
+        public void Mine(int difficulty)
+        {
+            Difficulty = difficulty;
+            string target = new string('0', Difficulty);
+
+            var sw = Stopwatch.StartNew();
+            do
+            {
+                Nonce++;
+                Hash = ComputeHash();
+            } while (!Hash.StartsWith(target, StringComparison.Ordinal));
+
+            sw.Stop();
+            MiningDurationMs = sw.ElapsedMilliseconds;
+        }
+
+
+        public bool HashValidProof()
+        {
+            string target = new string('0', Difficulty);
+            return Hash == ComputeHash() && Hash.StartsWith(target, StringComparison.Ordinal);
         }
 
 

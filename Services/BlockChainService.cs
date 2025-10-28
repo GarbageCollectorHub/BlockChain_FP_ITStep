@@ -13,6 +13,9 @@ namespace BlockChain_FP_ITStep.Services
         //private readonly RSAParameters _publicKey;
         //private readonly string _publicKeyXml;
 
+        // l3
+        public static int Difficulty { get; set; } = 3;
+
 
         public BlockChainService(ApplicationDbContext db)
         {
@@ -52,15 +55,18 @@ namespace BlockChain_FP_ITStep.Services
 
 
 
-        public async Task AddBlockAsync(string data, string privateKeyXml)
+        public async Task<long> AddBlockAsync(string data, string privateKeyXml)
         {
             try
             {
                 var blocks = await GetAllBlocksAsync();
                 var prevBlock = blocks.LastOrDefault();
-                if (prevBlock == null) return;
+                if (prevBlock == null) return 0;
 
                 var newBlock = new Block(blocks.Count, data, prevBlock.Hash);
+
+                // l3
+                newBlock.Mine(Difficulty);
 
                 // пробуем получить публичный ключ из приватного
                 var publicKeyXml = GetPublicKeyFromPrivate(privateKeyXml);
@@ -75,6 +81,7 @@ namespace BlockChain_FP_ITStep.Services
 
                 _db.Blocks.Add(newBlock);
                 await _db.SaveChangesAsync();
+                return newBlock.MiningDurationMs;
             }
             catch (Exception ex)
             {
@@ -127,6 +134,7 @@ namespace BlockChain_FP_ITStep.Services
                 if (current.PrevHash != prevBlock.Hash) return false;
                 if (current.Hash != current.ComputeHash()) return false;
                 if (!current.Verify()) return false;
+                if (!current.HashValidProof()) return false;
             }
             return true;
         }

@@ -24,7 +24,7 @@ namespace BlockChain_FP_ITStep.Controllers
             }).ToList();
 
             ViewBag.IsChainValid = model.All(b => b.IsValid);
-
+            ViewBag.Difficulty = BlockChainService.Difficulty;
             return View(model);
         }
 
@@ -42,7 +42,7 @@ namespace BlockChain_FP_ITStep.Controllers
 
             try
             {
-                await _bcService.AddBlockAsync(data, privateKey);
+                long ms = await _bcService.AddBlockAsync(data, privateKey);
                 TempData["AlertMessage"] = "Block successfully added.";
                 TempData["AlertType"] = "success";
             }
@@ -112,6 +112,15 @@ namespace BlockChain_FP_ITStep.Controllers
             var block = await _bcService.GetBlockByIdAsync(id);
             if (block == null) return NotFound();
             return View(block);
+        }
+
+        [HttpPost]
+        public IActionResult SetDifficulty(int difficulty)
+        {
+            if (difficulty < 1) difficulty = 1;
+            if (difficulty > 6) difficulty = 6;
+            BlockChainService.Difficulty =  difficulty;
+            return RedirectToAction("Index");
         }
 
     }

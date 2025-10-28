@@ -35,7 +35,7 @@ else
     <div class="row g-3">
         <div class="col-md-6">
             <!-- add block -->
-            <form method="post" asp-action="Add" novalidate>
+            <form method="post" asp-action="Add" id="addBlockForm"  novalidate>
                 <div class="input-group">
                     <input type="text" name="data" class="form-control" placeholder="Enter block data" required />
                     <input type="password" id="privateKeyInput" name="privateKey" class="form-control" placeholder="Enter private key" required />
@@ -55,6 +55,33 @@ else
                 </div>
             </form>
         </div>
+
+        <div class="col-md-6">
+            <div>Difficulty @ViewBag.Difficulty</div>
+            <!-- set block chain mining difficulty -->
+            <form method="post" asp-action="SetDifficulty" novalidate>
+                <div class="input-group">
+                    <input type="text" name="difficulty" class="form-control" placeholder="enter difficulty" />
+                    <button type="submit" class="btn btn-primary">Set</button>
+                </div>
+            </form>
+
+            <!-- progress bar -->
+            <div id="miningProgress" class="mt-2" style="display:none;">
+                <div class="progress" style="height: 8px;">
+                    <div id="progressBarInline"
+                         class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                         role="progressbar"
+                         aria-valuemin="0"
+                         aria-valuemax="100"
+                         style="width: 0%;">
+                    </div>
+                </div>
+                <small id="progressText" class="text-muted">⛏️ Mining block...</small>
+            </div>
+
+
+        </div>
     </div>
 
 </div>
@@ -66,6 +93,12 @@ else
         <tr>
             <th>
                 @Html.DisplayNameFor(model => model.Block.Index)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Block.Nonce)
+            </th>
+            <th>
+                Mining Duration
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Block.Data)
@@ -101,16 +134,28 @@ else
                     @Html.DisplayFor(modelItem => item.Block.Index)
                 </td>
                 <td>
+                    @Html.DisplayFor(modelItem => item.Block.Nonce)
+                </td>
+
+                <td>
+                    @{
+                        var ms = item.Block.MiningDurationMs;
+                        var seconds = ms / 1000.0;
+                    }
+                    @* @($"{seconds:F2} s ({ms} ms)") *@
+                    @($"{seconds:F2} s")
+                </td>
+                <td>
                     @Html.DisplayFor(modelItem => item.Block.Data)
                 </td>
                 <!--  PrevHash -->
-                <td title="@item.Block.PrevHash" onclick="copyToClipboard('@item.Block.PrevHash')" style="cursor:pointer;">
+                <td title="@item.Block.PrevHash" onclick="copyToClipboard('@item.Block.PrevHash', 'PrevHash')" style="cursor:pointer;">
                     @(item.Block.PrevHash?.Length > 16
                                     ? item.Block.PrevHash.Substring(0, 16) + "..."
                                     : item.Block.PrevHash)
                 </td>
                 <!--  Hash -->
-                <td title="@item.Block.Hash" onclick="copyToClipboard('@item.Block.Hash')" style="cursor:pointer;">
+                <td title="@item.Block.Hash" onclick="copyToClipboard('@item.Block.Hash', 'Hash')" style="cursor:pointer;">
                     @(item.Block.Hash?.Length > 16
                                     ? item.Block.Hash.Substring(0, 16) + "..."
                                     : item.Block.Hash)
@@ -121,7 +166,7 @@ else
                 </td>
 
                 <!--  Signature -->
-                <td title="@item.Block.Signature" onclick="copyToClipboard('@item.Block.Signature')" style="cursor:pointer;">
+                <td title="@item.Block.Signature" onclick="copyToClipboard('@item.Block.Signature', 'Signature')" style="cursor:pointer;">
                     @(item.Block.Signature?.Length > 16
                                     ? item.Block.Signature.Substring(0, 16) + "..."
                                     : item.Block.Signature)
@@ -198,9 +243,9 @@ else
         });
 
         // Копирует текст в буфер и показывает toast-уведомление
-        function copyToClipboard(text) {
+        function copyToClipboard(text, label) {
             navigator.clipboard.writeText(text)
-                .then(() => showToast("Signature copied to clipboard."))
+                .then(() => showToast(`${label} copied to clipboard`))
                 .catch(() => showToast("Failed to copy", true));
         }
 
@@ -217,6 +262,26 @@ else
                 icon.classList.replace('bi-eye-slash', 'bi-eye');
             }
         });
+
+        // progress barr 
+        document.getElementById("addBlockForm").addEventListener("submit", function (e) {
+            const progressContainer = document.getElementById("miningProgress");
+            const bar = document.getElementById("progressBarInline");
+            const text = document.getElementById("progressText");
+
+            progressContainer.style.display = "block";
+            bar.style.width = "0%";
+            text.textContent = "⛏️ Mining block...";
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress = Math.min(progress + Math.random() * 10, 95);
+                bar.style.width = progress + "%";
+            }, 400);
+
+            window.addEventListener("beforeunload", () => clearInterval(interval));
+        });
+
 
 
     </script>
