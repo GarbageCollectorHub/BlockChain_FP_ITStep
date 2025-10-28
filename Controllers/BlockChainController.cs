@@ -8,6 +8,8 @@ namespace BlockChain_FP_ITStep.Controllers
     {
         private readonly BlockChainService _bcService = bcService;
 
+        public static CancellationTokenSource? _cts;
+
         public async Task<IActionResult> Index()
         {
             ViewBag.AlertMessage = TempData["AlertMessage"];
@@ -123,5 +125,33 @@ namespace BlockChain_FP_ITStep.Controllers
             return RedirectToAction("Index");
         }
 
+
+        // Mining
+        [HttpPost]
+        public IActionResult StartMining(string data, string privateKey)
+        {
+            if (string.IsNullOrWhiteSpace(privateKey))
+                return BadRequest("Private key required");
+
+            if (string.IsNullOrWhiteSpace(data))
+                data = "Empty";
+
+            _cts = new CancellationTokenSource();
+            var progress = new Progress<int>(_ => { });
+
+            Task.Run(async () =>
+            {
+                await _bcService.MineAsync(data, privateKey, _cts.Token, progress);
+            });
+
+            return Ok();
+        }
+
+        [HttpPost]
+        public IActionResult StopMining()
+        {
+            _cts?.Cancel();
+            return Ok();
+        }
     }
 }

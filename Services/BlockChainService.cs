@@ -1,39 +1,32 @@
 ﻿using BlockChain_FP_ITStep.Data;
+using BlockChain_FP_ITStep.Hubs;
 using BlockChain_FP_ITStep.Models;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using System.Security.Cryptography;
 
 namespace BlockChain_FP_ITStep.Services
 {
     public class BlockChainService
     {
-        private readonly ApplicationDbContext _db;
-
-        //private readonly RSAParameters _privateKey;
-        //private readonly RSAParameters _publicKey;
-        //private readonly string _publicKeyXml;
-
-        // l3
+        private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
+        private readonly IHubContext<MiningHub> _hub;    // MiningHub (SignalR)
         public static int Difficulty { get; set; } = 3;
+       
 
-
-        public BlockChainService(ApplicationDbContext db)
+        public BlockChainService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<MiningHub> hub)
         {
-            _db = db;
-           
-            // var rsa = RSA.Create();
-            //_privateKey = rsa.ExportParameters(true);
-            //_publicKey = rsa.ExportParameters(false);
-            //_publicKeyXml = rsa.ToXmlString(false);
-            //// ===
+            _dbFactory = dbFactory;
+            _hub = hub;
 
-
-            InitGenBlock();
+            using var db = _dbFactory.CreateDbContext();
+            InitGenBlock(db);
         }
 
-        private void InitGenBlock()
+        private void InitGenBlock(ApplicationDbContext db)
         {
-            if (!_db.Blocks.Any())
+            if (!db.Blocks.Any())
             {
                 using var rsa = RSA.Create(2048);
                 var privateKey = rsa.ExportParameters(true);
@@ -42,15 +35,15 @@ namespace BlockChain_FP_ITStep.Services
                 var genBlock = new Block(0, "Genesis-block", "");
                 genBlock.Sign(privateKey, publicKeyXml);
 
-                _db.Blocks.Add(genBlock);
-                _db.SaveChanges();
+                db.Blocks.Add(genBlock);
+                db.SaveChanges();
             }
         }
 
         public async Task<List<Block>> GetAllBlocksAsync()
         {
-
-            return await _db.Blocks.OrderBy(b => b.Index).ToListAsync();
+            using var db = _dbFactory.CreateDbContext();
+            return await db.Blocks.OrderBy(b => b.Index).ToListAsync();
         }
 
 
@@ -63,31 +56,49 @@ namespace BlockChain_FP_ITStep.Services
                 var prevBlock = blocks.LastOrDefault();
                 if (prevBlock == null) return 0;
 
+                using var db = _dbFactory.CreateDbContext();
+
+                // Проверка что блок на этой позиции ещё не существует
+                var exists = await db.Blocks.AnyAsync(b => b.Index == blocks.Count);
+                if (exists)
+                {
+                    throw new InvalidOperationException("Block position conflict");
+                }
+
                 var newBlock = new Block(blocks.Count, data, prevBlock.Hash);
 
-                // l3
+                // Mining
                 newBlock.Mine(Difficulty);
 
-                // пробуем получить публичный ключ из приватного
+                // Key validation
                 var publicKeyXml = GetPublicKeyFromPrivate(privateKeyXml);
                 if (string.IsNullOrEmpty(publicKeyXml))
-                    throw new InvalidOperationException("Key format invalid");
+                    throw new CryptographicException("Key format invalid");
 
                 using var rsa = RSA.Create();
-                rsa.FromXmlString(privateKeyXml);    // если ключ кривой — тут вылетит
+                rsa.FromXmlString(privateKeyXml);
                 var privateParams = rsa.ExportParameters(true);
 
                 newBlock.Sign(privateParams, publicKeyXml);
 
-                _db.Blocks.Add(newBlock);
-                await _db.SaveChangesAsync();
+                // Save
+                db.Blocks.Add(newBlock);
+                await db.SaveChangesAsync();
                 return newBlock.MiningDurationMs;
+            }
+            catch (CryptographicException)
+            {
+                throw new ApplicationException("Invalid private key. Please try again with a valid key.");
+            }
+            catch (InvalidOperationException ex)
+                when (ex.Message.Contains("fork"))
+            {
+                throw new ApplicationException("Block rejected: chain fork detected. Refresh chain.");
             }
             catch (Exception ex)
             {
-                // логируем, а сообщение пробрасываем выше в контроллер
                 Console.WriteLine($"[AddBlockAsync] {ex.GetType().Name}: {ex.Message}");
-                throw new ApplicationException("Invalid private key. Please try again with a valid key.");
+                throw new ApplicationException("Unexpected error during block creation.");
             }
         }
 
@@ -95,29 +106,33 @@ namespace BlockChain_FP_ITStep.Services
 
         public async Task<Block?> GetBlockByIndexAsync(int index)
         {
-            return await _db.Blocks.FirstOrDefaultAsync(b => b.Index == index);
+            using var db = _dbFactory.CreateDbContext();
+            return await db.Blocks.FirstOrDefaultAsync(b => b.Index == index);
         }
 
         public async Task<Block?> GetBlockByIdAsync(int id)
         {
-            return await _db.Blocks.FirstOrDefaultAsync(b => b.Id == id);
+            using var db = _dbFactory.CreateDbContext();
+            return await db.Blocks.FirstOrDefaultAsync(b => b.Id == id);
         }
 
 
         public async Task<bool> EditBlockAsync(int index, string data, string? signature = null)
         {
-            var block = await GetBlockByIndexAsync(index);
+            using var db = _dbFactory.CreateDbContext();
+
+            var block = await db.Blocks.FirstOrDefaultAsync(b => b.Index == index);
             if (block == null) return false;
 
             block.Data = data;
             if (!string.IsNullOrWhiteSpace(signature))
             {
                 block.UpdateSignature(signature);
-            }          
+            }
             block.Hash = block.ComputeHash();
 
-            _db.Blocks.Update(block);
-            await _db.SaveChangesAsync();
+            db.Blocks.Update(block);
+            await db.SaveChangesAsync();
             return true;
         }
 
@@ -210,6 +225,80 @@ namespace BlockChain_FP_ITStep.Services
                 IsValid = b.Verify()
             }).ToList();
         }
+
+
+
+        public async Task<long> MineAsync(string data, string privateKeyXml, CancellationToken ct, IProgress<int>? progress = null)
+        {
+            var blocks = await GetAllBlocksAsync();         // получаем текущую цепочку
+            var prevBlock = blocks.Last();
+            var newBlock = new Block(blocks.Count, data, prevBlock.Hash)
+            {
+                Difficulty = Difficulty
+            };
+
+            string target = new string('0', Difficulty);    // строка вида "000"
+            var sw = Stopwatch.StartNew();
+            int tries = 0;
+
+            // attempts/sec (перебор Nonce)
+            long attemptCounter = 0;
+            var rateTimer = Stopwatch.StartNew();
+
+            while (!ct.IsCancellationRequested)
+            {
+                newBlock.Nonce++;
+                newBlock.Hash = newBlock.ComputeHash();
+                tries++;
+                attemptCounter++;
+
+                // Обновляем прогресс каждые 5000 попыток (чтобы не спамить signalr)
+                if (tries % 5000 == 0)
+                {
+                    int percent = Math.Min(99, tries / 20000);
+                    progress?.Report(percent);
+                    await _hub.Clients.All.SendAsync("MiningProgress", percent);
+                }
+
+                // отправка attempts/sec раз в секунду
+                if (rateTimer.ElapsedMilliseconds >= 1000)
+                {
+                    await _hub.Clients.All.SendAsync("MiningAttemptsPerSecond", attemptCounter);
+                    attemptCounter = 0;
+                    rateTimer.Restart();
+                }
+
+                // нужный хэш найден
+                if (newBlock.Hash.StartsWith(target))
+                {
+                    sw.Stop();
+                    newBlock.MiningDurationMs = sw.ElapsedMilliseconds;
+
+                    // подписываем блок
+                    using var rsa = RSA.Create();
+                    rsa.FromXmlString(privateKeyXml);
+                    var privateParams = rsa.ExportParameters(true);
+                    var publicKeyXml = rsa.ToXmlString(false);
+                    newBlock.Sign(privateParams, publicKeyXml);
+
+                    using var db = _dbFactory.CreateDbContext();
+                    db.Blocks.Add(newBlock);
+                    await db.SaveChangesAsync();
+
+                    await _hub.Clients.All.SendAsync("MiningProgress", 100);
+                    await _hub.Clients.All.SendAsync("MiningAttemptsPerSecond", 0);
+
+                    return newBlock.MiningDurationMs;
+                }
+            }
+
+            // Если майнинг остановлен
+            await _hub.Clients.All.SendAsync("MiningProgress", -1);
+            await _hub.Clients.All.SendAsync("MiningAttemptsPerSecond", 0);
+            return -1;
+        }
+
+
 
 
 

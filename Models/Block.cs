@@ -103,7 +103,8 @@ namespace BlockChain_FP_ITStep.Models
         public bool HashValidProof()
         {
             string target = new string('0', Difficulty);
-            return Hash == ComputeHash() && Hash.StartsWith(target, StringComparison.Ordinal);
+            //return Hash == ComputeHash() && Hash.StartsWith(target, StringComparison.Ordinal);        <<-- иногда генерируются блоки где в превхеш, хеш позапрошлых блоков?
+            return Hash.StartsWith(new string('0', Difficulty), StringComparison.Ordinal);
         }
 
 

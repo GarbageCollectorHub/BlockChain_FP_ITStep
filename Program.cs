@@ -1,4 +1,5 @@
 using BlockChain_FP_ITStep.Data;
+using BlockChain_FP_ITStep.Hubs;
 using BlockChain_FP_ITStep.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,17 +10,18 @@ builder.Services.AddControllersWithViews();
 
 
 
-// DB
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+// DB context Factory
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration["ConnectionStrings:DefaultConnection"]);
 });
 
+
 // DI's
 builder.Services.AddScoped<BlockChainService>();
 
-
-
+// SignalR
+builder.Services.AddSignalR();
 
 
 var app = builder.Build();
@@ -42,6 +44,9 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=BlockChain}/{action=Index}/{id?}")
     .WithStaticAssets();
+
+// signalR mining Hub
+app.MapHub<MiningHub>("/miningHub");
 
 
 //  DB scope
