@@ -61,3 +61,16 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+
+
+# GitHub Linguist: classify as C#
+*.cs linguist-language=C#
+*.cshtml linguist-language=C#
+*.razor linguist-language=C#
+
+# Ignore static frontend assets
+*.html linguist-detectable=false
+wwwroot/* linguist-vendored
+node_modules/* linguist-vendored
+lib/* linguist-vendored
