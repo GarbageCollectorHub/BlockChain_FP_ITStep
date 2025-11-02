@@ -11,36 +11,57 @@ namespace BlockChain_FP_ITStep.Models
         public int Id { get; set; }         // Id - первичный ключ БД (не влияет на хэш)
 
         public int Index { get; set; }      // Index - номер блока в цепочке, участвует в хэше и определяет порядок блоков
-        public string Data { get; set; }
+        public List<Transaction> Transactions { get; } = new();
+
+        // Кол-во транзакций для UI.
+        public int TxCount => Transactions.Count;
         public string PrevHash { get; set; }
         public string Hash { get; set; }
         public DateTime Timestamp { get; set; }
- 
-        public string Signature { get; private set; }    // Подпись блока 
-        public string PublicKeyXml { get; private set; }    
+
+        public string Signature { get; private set; } = "";   // Подпись блока 
+        public string PublicKeyXml { get; private set; }
 
         // l3 -> PoW
         public int Nonce { get; set; }
-        public int Difficulty {  get; set; }
+        public int Difficulty { get; set; }
         public long MiningDurationMs { get; set; }
 
-        // ------------- //
+        // -------------------- //
         public Block() { }
 
-        public Block(int index, string data, string prevHash)
+        public Block(int index, string prevHash)
         {
             Index = index;
-            Data = data;
             PrevHash = prevHash;
             Timestamp = DateTime.UtcNow;
             Hash = ComputeHash();
+        }
+
+        public void SetTransaction(List<Transaction> transactions)
+        {
+            Transactions.Clear();
+            Transactions.AddRange(transactions);
+        }
+
+        private string CanonicalizerTransactions()
+        {
+            var sb = new StringBuilder();
+            foreach (var tx in Transactions)
+            {
+                sb.Append(tx.CanonicalPayload());
+                sb.Append("|");         
+            }
+            return sb.ToString();
         }
 
 
         public string ComputeHash()
         {
             var ts = new DateTime(Timestamp.Ticks - (Timestamp.Ticks % TimeSpan.TicksPerMillisecond), DateTimeKind.Utc); // Округляем время до миллисекунд, чтобы совпадало с точностью SQL и хэш не менялся после сохранения
-            var raw = Index + Data + PrevHash + ts.ToString("O") + Nonce + Difficulty;
+            
+            //var raw = Index + Data + PrevHash + ts.ToString("O") + Nonce + Difficulty;
+            var raw = Index + PrevHash + ts.ToString("O") + Nonce + Difficulty + CanonicalizerTransactions();
 
             using var sha = SHA256.Create();
             byte[] bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(raw));
@@ -60,7 +81,7 @@ namespace BlockChain_FP_ITStep.Models
 
         public bool Verify()
         {
-            if(String.IsNullOrWhiteSpace(Signature)) return false;
+            if (String.IsNullOrWhiteSpace(Signature)) return false;
             try
             {
                 var rsa = RSA.Create();
@@ -70,7 +91,7 @@ namespace BlockChain_FP_ITStep.Models
                 return rsa.VerifyData(data, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex);
                 return false;
@@ -103,8 +124,7 @@ namespace BlockChain_FP_ITStep.Models
         public bool HashValidProof()
         {
             string target = new string('0', Difficulty);
-            //return Hash == ComputeHash() && Hash.StartsWith(target, StringComparison.Ordinal);        <<-- иногда генерируются блоки где в превхеш, хеш позапрошлых блоков?
-            return Hash.StartsWith(new string('0', Difficulty), StringComparison.Ordinal);
+            return Hash == ComputeHash() && Hash.StartsWith(target, StringComparison.Ordinal);
         }
 
 

@@ -18,7 +18,9 @@ builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
 
 
 // DI's
-builder.Services.AddScoped<BlockChainService>();
+//builder.Services.AddScoped<BlockChainService>();
+
+builder.Services.AddSingleton<BlockChainService>();   // Wallets мб всетаки надо в БД писать,  пока что сделаем Синглтон чтобы коллеккция Валлетс сохранялась между запросами в UI.
 
 // SignalR
 builder.Services.AddSignalR();

@@ -21,6 +21,9 @@ namespace BlockChain_FP_ITStep.Data
             modelBuilder.Entity<Block>()
                 .HasIndex(b => b.Index);
 
+            // Транзакции не будем ложить в БД.  !?
+            modelBuilder.Ignore<Transaction>();
+
 
         }
     }

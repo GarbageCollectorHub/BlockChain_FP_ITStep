@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace BlockChain_FP_ITStep.Services
 {
@@ -14,6 +15,12 @@ namespace BlockChain_FP_ITStep.Services
         private readonly IHubContext<MiningHub> _hub;    // MiningHub (SignalR)
         public static int Difficulty { get; set; } = 3;
        
+
+        public Dictionary<string, Wallet> Wallets { get; set; } = new();
+        public List<Transaction> Mempool { get; set; } = new();
+        public const decimal MinerReward = 1.0m;
+
+
 
         public BlockChainService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<MiningHub> hub)
         {
@@ -32,20 +39,77 @@ namespace BlockChain_FP_ITStep.Services
                 var privateKey = rsa.ExportParameters(true);
                 var publicKeyXml = rsa.ToXmlString(false);
 
-                var genBlock = new Block(0, "Genesis-block", "");
+                var genBlock = new Block(0, "");
                 genBlock.Sign(privateKey, publicKeyXml);
 
                 db.Blocks.Add(genBlock);
                 db.SaveChanges();
             }
         }
+        
 
-        public async Task<List<Block>> GetAllBlocksAsync()
+        public Wallet RegisterWallet(string publicKeyXml, string displayName)
         {
-            using var db = _dbFactory.CreateDbContext();
-            return await db.Blocks.OrderBy(b => b.Index).ToListAsync();
+            var wallet = new Wallet
+            {
+                PublicKeyXml = publicKeyXml,
+                Address = Wallet.DereveAddressFromPublicKeyXml(publicKeyXml),
+                DisplayName = displayName
+            };
+            Wallets[wallet.Address] = wallet;
+            return wallet;
         }
 
+        public void CreateTransaction(Transaction transaction)
+        {
+            var rsa = RSA.Create();
+            var wallet = Wallets[transaction.FromAddress];
+            rsa.FromXmlString(wallet.PublicKeyXml);
+            var payload = Encoding.UTF8.GetBytes(transaction.CanonicalPayload());
+            var sig = Convert.FromBase64String(transaction.Signature);
+            if(!rsa.VerifyData(payload, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+            {
+                throw new Exception("Invalid Transaction Signature");
+            }
+            Mempool.Add(transaction);
+        }
+
+        public async Task<Block> MinePendingAsync(string privateKeyXml)
+        {
+            using var db = _dbFactory.CreateDbContext();
+            var prevBlock = await db.Blocks.OrderBy(b => b.Index).LastAsync();
+
+            // Получаем публичный ключ фром private
+            using var rsa = RSA.Create();
+            rsa.FromXmlString(privateKeyXml);
+            var publicKeyXml = rsa.ToXmlString(false);
+
+            var minerAddress = Wallets.Values.FirstOrDefault(w => w.PublicKeyXml == publicKeyXml)?.Address;
+            decimal totalFee = Mempool.Sum(t => t.Fee);
+            var txs = new List<Transaction>
+            {
+                new Transaction
+                {
+                    FromAddress = "COINBASE",
+                    ToAddress = minerAddress,
+                    Amount = MinerReward + totalFee
+                }
+            };
+
+            txs.AddRange(Mempool);
+            var newBlock = new Block(prevBlock.Index + 1, prevBlock.Hash);
+            newBlock.SetTransaction(txs);
+            newBlock.Mine(Difficulty);
+
+            var privateParams = rsa.ExportParameters(true);
+            newBlock.Sign(privateParams, publicKeyXml);
+
+            db.Blocks.Add(newBlock);
+            await db.SaveChangesAsync();
+
+            Mempool.Clear();
+            return newBlock;
+        }
 
 
         public async Task<long> AddBlockAsync(string data, string privateKeyXml)
@@ -65,7 +129,7 @@ namespace BlockChain_FP_ITStep.Services
                     throw new InvalidOperationException("Block position conflict");
                 }
 
-                var newBlock = new Block(blocks.Count, data, prevBlock.Hash);
+                var newBlock = new Block(blocks.Count, prevBlock.Hash);
 
                 // Mining
                 newBlock.Mine(Difficulty);
@@ -102,7 +166,11 @@ namespace BlockChain_FP_ITStep.Services
             }
         }
 
-
+        public async Task<List<Block>> GetAllBlocksAsync()
+        {
+            using var db = _dbFactory.CreateDbContext();
+            return await db.Blocks.OrderBy(b => b.Index).ToListAsync();
+        }
 
         public async Task<Block?> GetBlockByIndexAsync(int index)
         {
@@ -116,15 +184,13 @@ namespace BlockChain_FP_ITStep.Services
             return await db.Blocks.FirstOrDefaultAsync(b => b.Id == id);
         }
 
-
-        public async Task<bool> EditBlockAsync(int index, string data, string? signature = null)
+        public async Task<bool> EditBlockAsync(int index, string? signature = null)
         {
             using var db = _dbFactory.CreateDbContext();
 
             var block = await db.Blocks.FirstOrDefaultAsync(b => b.Index == index);
             if (block == null) return false;
 
-            block.Data = data;
             if (!string.IsNullOrWhiteSpace(signature))
             {
                 block.UpdateSignature(signature);
@@ -135,7 +201,6 @@ namespace BlockChain_FP_ITStep.Services
             await db.SaveChangesAsync();
             return true;
         }
-
 
         public async Task<bool> IsValidAsync()
         {
@@ -191,14 +256,11 @@ namespace BlockChain_FP_ITStep.Services
             return result;
         }
 
-
-        //  === L2 ===
         public string GeneratePrivateKeyXml()
         {
             using var rsa = RSA.Create();
             return rsa.ToXmlString(true);      // true = экспортировать всю пару ключей(публичный + приватный компоненты)
         }
-
 
         public string? GetPublicKeyFromPrivate(string privateKeyXml)
         {
@@ -226,13 +288,11 @@ namespace BlockChain_FP_ITStep.Services
             }).ToList();
         }
 
-
-
-        public async Task<long> MineAsync(string data, string privateKeyXml, CancellationToken ct, IProgress<int>? progress = null)
+        public async Task<long> MineAsync(string privateKeyXml, CancellationToken ct, IProgress<int>? progress = null)
         {
             var blocks = await GetAllBlocksAsync();         // получаем текущую цепочку
             var prevBlock = blocks.Last();
-            var newBlock = new Block(blocks.Count, data, prevBlock.Hash)
+            var newBlock = new Block(blocks.Count, prevBlock.Hash)
             {
                 Difficulty = Difficulty
             };
@@ -299,8 +359,24 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
+        // Demo Method, later be remooved...
+        public (Wallet wallet, string privateKeyXml) CreateWallet(string displayName)
+        {
+            var rsa = RSA.Create();
+            var privateKeyXml = rsa.ToXmlString(true);
+            var publicKeyXml = rsa.ToXmlString(false);
+            var wallet = RegisterWallet(publicKeyXml, displayName);
+            return(wallet, privateKeyXml);
+        }
 
-
+        public static string SignPayload(string payload, string privateKeyXml)
+        {
+            var rsa = RSA.Create();
+            rsa.FromXmlString(privateKeyXml);
+            var data = Encoding.UTF8.GetBytes(payload);
+            var sig = rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return Convert.ToBase64String(sig);
+        }
 
 
 
