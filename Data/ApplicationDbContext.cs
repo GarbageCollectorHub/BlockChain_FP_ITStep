@@ -13,6 +13,7 @@ namespace BlockChain_FP_ITStep.Data
         }
 
         public DbSet<Block> Blocks { get; set; } = null!;
+        public DbSet<Transaction> Transactions { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -21,8 +22,13 @@ namespace BlockChain_FP_ITStep.Data
             modelBuilder.Entity<Block>()
                 .HasIndex(b => b.Index);
 
-            // Транзакции не будем ложить в БД.  !?
-            modelBuilder.Ignore<Transaction>();
+
+            modelBuilder.Entity<Block>()
+                .HasMany(b => b.Transactions)
+                .WithOne(t => t.Block)
+                .HasForeignKey(t => t.BlockId)
+                .OnDelete(DeleteBehavior.Restrict);
+
 
 
         }

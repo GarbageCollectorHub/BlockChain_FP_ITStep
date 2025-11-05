@@ -4,12 +4,13 @@
     ViewData["Title"] = "Index";
 
     // Default private key for input
-    string defaultPrivateKey = @"<RSAKeyValue><Modulus>xdwWDMpZg59CfkOnhxi/DzO0fM0qCydvgdMsevwpNt71B0IU5140auD6Wvag86ns3abgJ/kwOmGWwlzf0sjIM8xSBjHUQavRIYvf9sDx9LmJKg7vXnIIMLkS/PfXJPMpiw865FU9QH7uQNje6WiqO1y54Ep/U+RPtBeX+80hac2Y3xJiWfEZ+QOZpq1Ay0qBQK1DTL8Jdxng0wgovDFSIwKUvIF7kdvFL/iJ/L4sW38ZubRuk96pSzVBAS/kdURqp9FVw+whRrfK5DQYgHg6uvmgte1L2oCOGlxxIlzcBjyBBL9PhbTH/pRsgYheCnpOuLFxfmMsJpFpBfRNPjkeaQ==</Modulus><Exponent>AQAB</Exponent><P>1fhyDfsGPRIa6tezc6htY9y9bvNyxeleE0G8TEhpQm1UPnGUBaDuTHP8P3YhDywa9R8KvP8jeG9SwTxO6OoHhNPOOkR3vYbQ49ePu3NzyHC2B0iVs5525WRw+5punuFl5S47SMkLDxWBppheh2rmzxp+cIIA43M95wnlpAhsvA8=</P><Q>7LmBpqVqwHjG1spYct3BAXsdh07xesleg8lbXkqu/Jz8TT49aWp3AGQGSTOYo9jDnI5mu4vuh/H9VouiIBagKNl8xeMR+niBJpCBQtB27nRi0m5oB3jkYKTEloOx7VOQcrs+nWjG0wKEjfbGA9xmggjRJq6/iQa0MeZqpKCOZgc=</Q><DP>F0j+QH884pCB1WS75q5BmUiAZP6hUuBemIHi1/pZWh1Dubfqf+JPjIpivRVB68DE/j/ujzrExWp3+wdxHu+4+b+DBdxFm558RQ9EWQXrZ7i8VnaTtARetAAGO5tGxouI5zPsx7L5PR7+CP8z6lC75XXgpKXBKv9zkR0GnJ8+Fgk=</DP><DQ>NY154SNG1Sf9g5XfEI1OHnGlqniXdHmdoh6pRtmKYKd7BFZyOijVpwb5zRGZFGfzSLWGVCNB4QtDjpKkKLI1pUgeS/4kkQ812G2UcHMMlMFLoeNMMXSN5bcgqhQ86j2fTfVCIwYTBKVrK1qKTVFM91nbRu79cZhMp4VC1t9jl30=</DQ><InverseQ>0as05x1Fr3IuVsipgrPyuNKMncjIQpwy3PRWOS1kfkHPBSXC8nwtkIM7cCmPR7wruty3S4U1oumo+cO+ziP17gIkTFEXHVRoa4BL/D3Kwt2uwE39NYMD7NhFgRtZu75VJMrq4sakZFxgEaHG6T7aaAR72eMaWNzgaCfsUvkt3DQ=</InverseQ><D>ccarT1OUweF05RKWZVNPmrhK03FO+fcFYgxDCb2zHYB8Ol4/kwRS9BrHHEOyLivKr3Lkd1gN6aRwgvfRJW6b4V1e1X0V52Wb7sR2V3iAKg/+1hacgxzjpNDoIFuMdgz2GKb7YI27mTjkXJnZJTMwoM4jfNyZ923Uf2UJ2pwM2L+EO5HmqEMJFjOT+qWmORN+4RT9hDTMOk7CvJyIj62Bk7PdDFS3/yJk9X/bJxfthmjtks92l3zIrSc/21FP9PCkoxNYa4MTsyDJ3Rh6X9OoufZ1t+eewPjRRjuqBs9/voGv5aS2eqyBM2EYvuO0MNPQRnRsijRKMEO0U51rnT51uQ==</D></RSAKeyValue>";
-    string defaultPublicKey  = @"<RSAKeyValue><Modulus>xdwWDMpZg59CfkOnhxi/DzO0fM0qCydvgdMsevwpNt71B0IU5140auD6Wvag86ns3abgJ/kwOmGWwlzf0sjIM8xSBjHUQavRIYvf9sDx9LmJKg7vXnIIMLkS/PfXJPMpiw865FU9QH7uQNje6WiqO1y54Ep/U+RPtBeX+80hac2Y3xJiWfEZ+QOZpq1Ay0qBQK1DTL8Jdxng0wgovDFSIwKUvIF7kdvFL/iJ/L4sW38ZubRuk96pSzVBAS/kdURqp9FVw+whRrfK5DQYgHg6uvmgte1L2oCOGlxxIlzcBjyBBL9PhbTH/pRsgYheCnpOuLFxfmMsJpFpBfRNPjkeaQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+    string defaultPrivateKey = @"<RSAKeyValue><Modulus>0DSFyEx2VeKUC9H+IfgdIAZiEvbXwHCvTc2iuUWLDn5/xUzglahpSX1xvHY3oC9TYLxeTd2+Tv52To2lC5aJRKEpRVT9LvNJLZ9dJQk1e92iYPJDxJkvR7UfPhOHCyANn7xcDfFpkLBrTmZ9AEqFAov4GoWCLc6JT8guwbUBgT3rQk28YpQjabHNo4AseRPMxFJM7XRmAgAcmoJU2wEpLA+xXKVcqlxmJMqJjw3JnMkyzp8flnRovYDrFIyL1UvyyqIVLREfbN6IHJRxNWTyg8ZrXYJdCeeKuRCTUomG18S2R1hrW9iEpYxPgTY5VxAqQuWlrdUEBQBbWLc0BW+geQ==</Modulus><Exponent>AQAB</Exponent><P>7SfA5wMA3NUJw8cwVYmNfI3dcqavYEgbqlTaDfZpcW6gKMXqWlyap8J5yRpt3mWgOuoThdfDGSeJVUU5PukK7/TIIJMbcL6hMI6GS7wwf0cetBG7Cwb0mEjeiraMjQwpEhiJcY7wXOGYt6+RSny3x34t1ksXl/IzGyhR3y+1qw8=</P><Q>4L/ckc91Bd6euU9HqudHu4zrxAcouiwy1Lu5MhW9DbInJS29D6w7yC4BrRbKFrSS650hWr6V+mchWdhZaO7MWiRv1Fg6JkguRS0yTp8f+7usG4cq9IigVL/uzpUaG18W37oXYB8J9dmmI218RycFYkAPLUgQoClaUUZKXL4TG/c=</Q><DP>g/jZWjTLqBhNhMs11IPlXmi70O99LMEz1AfACIEVkHAVZFsu3PYngi+xAf5ZIafAEMjt8E9vXHIp9G+/OYkJ8xpuu+HhJU6P+Kt3hHHHMyzqox4yziIivxPd86c+c8dOm6lX4v++NpG8IIvs+FyLENLgwx2qlX3MftJjLSYpnHU=</DP><DQ>bZTepLF0K2J6HXxMQ0X1MbrqEXA0KWH3fsXw7DyxKwZcE8KTVhryIw5bftuHuT5eDEdWxfn7AlZaaoYUQhd8x87QP8asw5GaDdyVlMP9Qi4lIl7rUMN0+R2EAHGugv4AFyGS2CkKIDb4zHlLiR27gEYfoEJs6MqA4PPWuhVrF80=</DQ><InverseQ>prHe1y2p49xN/ieDX6ul8hIO3jiFxZP6+UfiCyV32ZpnWqPs2wYz4kI48UbrJmyi3yKXsgpnGIOV7F8cbn2gTBHAWQ9vq3l2RXlsFMr2np8/5qs2g8VtSUs+Pq6jg2msAN6smSS7lz/+04RfUZXeQ/VbWi8pCQfOHzmEEE6IRT4=</InverseQ><D>NJcvu7pkoakL0DiIwrfTU4WJPFURhlBwV2y7z6SbTVvyljmm+OaDQcbn9by+rD2ICAVMpMqACaAI7iqlJ9osbiNvM04WbceSEm4Qrww2cEU5gNdw+rXe1XQQojN4hvzftBt1/SefjKajVDhbFrm8Azqrvrc+fKeQ05AzD0bTTHuMxp2DU2Hw4opTyGvqA2MbVf+EmSi3hOD6dB7p2J4vGY59XcXXhak62VeoAqnCdgHEtD1IEJTW3W/L0cSpLBpNihLOdwwRlgX0lHazPH6y+OeVHwKIMh+wKReyDo87s5mNrhW6QcrAPPi3j50dTxSGKvwVhjtjfmJDquqJBCBnCQ==</D></RSAKeyValue>";
+    string defaultPublicKey = @"<RSAKeyValue><Modulus>0DSFyEx2VeKUC9H+IfgdIAZiEvbXwHCvTc2iuUWLDn5/xUzglahpSX1xvHY3oC9TYLxeTd2+Tv52To2lC5aJRKEpRVT9LvNJLZ9dJQk1e92iYPJDxJkvR7UfPhOHCyANn7xcDfFpkLBrTmZ9AEqFAov4GoWCLc6JT8guwbUBgT3rQk28YpQjabHNo4AseRPMxFJM7XRmAgAcmoJU2wEpLA+xXKVcqlxmJMqJjw3JnMkyzp8flnRovYDrFIyL1UvyyqIVLREfbN6IHJRxNWTyg8ZrXYJdCeeKuRCTUomG18S2R1hrW9iEpYxPgTY5VxAqQuWlrdUEBQBbWLc0BW+geQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
     
     var mempool = ViewBag.Mempool as List<Transaction>;
     var mempoolCount = (int)ViewBag.MempoolCount;
     var wallets = ViewBag.Wallets as List<Wallet>;
+    var balances = ViewBag.Balances as Dictionary<string, decimal>;
 }
 
 @* alert -> IsChain Valid  *@
@@ -31,6 +32,15 @@ else
     <div class="alert alert-warning mt-3" role="alert">
         @ViewBag.SearchMessage
     </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            showToast("@TempData["Error"]", true);
+        });
+    </script>
 }
 
 <div style="display:flex; flex-direction:row">
@@ -109,6 +119,7 @@ else
                     <thead>
                         <th>Address</th>
                         <th>Name</th>
+                        <th>Amount</th>
                         <th>PublicKey</th>
                         <th>RegisteredAt</th>
                     </thead>
@@ -119,6 +130,15 @@ else
                             <tr>
                                 <td>@w.Address</td>
                                 <td>@w.DisplayName</td>
+                                @if (balances != null && balances.ContainsKey(w.Address))
+                                {
+                                    <td>@balances[w.Address]</td>
+                                }
+                                else
+                                {
+                                    <td>@("0")</td>
+                                }
+
 
                                 <td title="@w.PublicKeyXml" onclick="copyToClipboard('@w.PublicKeyXml', 'Public Key')" style="cursor:pointer;">
                                     @(w.PublicKeyXml?.Length > 20
@@ -450,36 +470,36 @@ else
         // }
 
 
-        // Получение прогресс майнинга из SignalR и обновляем progress bar
-        connection.on("MiningProgress", (percent) => {
-            if (!isMining) return; // игнорим обновления после Stop
+        // // Получение прогресс майнинга из SignalR и обновляем progress bar
+        // connection.on("MiningProgress", (percent) => {
+        //     if (!isMining) return; // игнорим обновления после Stop
 
-            const bar = document.getElementById("progressBarInline");
-            const container = document.getElementById("miningProgress");
+        //     const bar = document.getElementById("progressBarInline");
+        //     const container = document.getElementById("miningProgress");
 
-            container.style.display = "block";
+        //     container.style.display = "block";
 
-            // -1 = сервер просигналил сброс прогресса (остановка)
-            if (percent === -1) {
-                bar.style.width = "0%";
-                return;
-            }
+        //     // -1 = сервер просигналил сброс прогресса (остановка)
+        //     if (percent === -1) {
+        //         bar.style.width = "0%";
+        //         return;
+        //     }
 
-            bar.style.width = percent + "%";
+        //     bar.style.width = percent + "%";
 
-            // 100% = блок намайнен → обновляем UI
-            if (percent === 100) {
-                isMining = false;
-                setTimeout(() => location.reload(), 400);
-            }
-        });
+        //     // 100% = блок намайнен → обновляем UI
+        //     if (percent === 100) {
+        //         isMining = false;
+        //         setTimeout(() => location.reload(), 400);
+        //     }
+        // });
 
-        // Получение и отображение скорости перебора Nonce (attempts/sec) из SignalR
-        connection.on("MiningAttemptsPerSecond", (aps) => {
-            if (!isMining) return;
-            const el = document.getElementById("attemptsText");
-            el.textContent = `${aps.toLocaleString()} attempts/s`;
-        });
+        // // Получение и отображение скорости перебора Nonce (attempts/sec) из SignalR
+        // connection.on("MiningAttemptsPerSecond", (aps) => {
+        //     if (!isMining) return;
+        //     const el = document.getElementById("attemptsText");
+        //     el.textContent = `${aps.toLocaleString()} attempts/s`;
+        // });
 
 
         // // ыtart mining and disable Add button
@@ -528,31 +548,38 @@ else
 
         // NEW UI - v0.2
         // START MINE PRogress bar через SIgnalR
-        document.querySelector("form[action$='MinePending'] input[name='privateKey']")
-            .closest("form")
-            .addEventListener("submit", function (e) {
-                e.preventDefault(); // блокируем обычный POST
+        // document.querySelector("form[action$='MinePending'] input[name='privateKey']")
+        //     .closest("form")
+        //     .addEventListener("submit", function (e) {
+        //         e.preventDefault(); // блокируем обычный POST
 
-                const privateKey = this.querySelector("input[name='privateKey']").value;
-                if (!privateKey.trim()) {
-                    showToast("Enter private key before mining!", true);
-                    return;
-                }
+        //         const privateKey = this.querySelector("input[name='privateKey']").value;
+        //         if (!privateKey.trim()) {
+        //             showToast("Enter private key before mining!", true);
+        //             return;
+        //         }
 
-                if (isMining) return;
-                isMining = true;
+        //         if (isMining) return;
+        //         isMining = true;
 
-                // показываем прогресс-бар
-                document.getElementById("miningProgress").style.display = "block";
-                document.getElementById("progressBarInline").style.width = "0%";
+        //         // показываем прогресс-бар
+        //         document.getElementById("miningProgress").style.display = "block";
+        //         document.getElementById("progressBarInline").style.width = "0%";
 
-                fetch("/BlockChain/StartMining", {
-                    method: "POST",
-                    body: new URLSearchParams({ privateKey })
-                })
-                // .then(() => showToast("Mining started..."))
-                // .catch(() => showToast("Mining error", true));
-        });
+        //         fetch("/BlockChain/MinePending", {
+        //             method: "POST",
+        //             body: new URLSearchParams({ privateKey })
+        //         })
+        //         // .then(() => showToast("Mining started..."))
+        //         // .catch(() => showToast("Mining error", true));
+        // });
+
+
+
+
+
+
+
 
 
     </script>

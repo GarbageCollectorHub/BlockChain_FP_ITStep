@@ -5,6 +5,10 @@ namespace BlockChain_FP_ITStep.Models
 {
     public class Transaction
     {
+        [Key]
+        public int Id { get; set; }
+        public int BlockId { get; set; }
+
         [Required]
         public string FromAddress { get; set; } = string.Empty;
         [Required]
@@ -13,6 +17,9 @@ namespace BlockChain_FP_ITStep.Models
         public decimal Fee { get; set; }
         public string  Signature { get; set; } = string.Empty;
         public string? Note { get; set; }
+
+        // nav prop
+        public Block Block { get; set; }
 
         // Метод унификации строки, которую будем использовать в транзакциях? и также потом как часть Подписи?
         public string CanonicalPayload()

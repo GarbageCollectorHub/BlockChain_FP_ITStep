@@ -11,7 +11,7 @@ namespace BlockChain_FP_ITStep.Models
         public int Id { get; set; }         // Id - первичный ключ БД (не влияет на хэш)
 
         public int Index { get; set; }      // Index - номер блока в цепочке, участвует в хэше и определяет порядок блоков
-        public List<Transaction> Transactions { get; } = new();
+        
 
         // Кол-во транзакций для UI.
         public int TxCount => Transactions.Count;
@@ -26,6 +26,10 @@ namespace BlockChain_FP_ITStep.Models
         public int Nonce { get; set; }
         public int Difficulty { get; set; }
         public long MiningDurationMs { get; set; }
+
+
+        public List<Transaction> Transactions { get; set; } = new();
+
 
         // -------------------- //
         public Block() { }

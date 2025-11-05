@@ -47,7 +47,6 @@ namespace BlockChain_FP_ITStep.Services
             }
         }
         
-
         public Wallet RegisterWallet(string publicKeyXml, string displayName)
         {
             var wallet = new Wallet
@@ -64,13 +63,23 @@ namespace BlockChain_FP_ITStep.Services
         {
             var rsa = RSA.Create();
             var wallet = Wallets[transaction.FromAddress];
+
             rsa.FromXmlString(wallet.PublicKeyXml);
             var payload = Encoding.UTF8.GetBytes(transaction.CanonicalPayload());
             var sig = Convert.FromBase64String(transaction.Signature);
+
             if(!rsa.VerifyData(payload, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
             {
                 throw new Exception("Invalid Transaction Signature");
             }
+
+            var balances = GetBalances(includeMempool: false).Result;                       // include memorypool -> false 
+            balances.TryGetValue(transaction.FromAddress, out var fromBalance);
+
+            var required = transaction.Amount + transaction.Fee;
+            if (fromBalance < required && transaction.FromAddress != "COINBASE")
+                throw new Exception("Insufficient funds");
+
             Mempool.Add(transaction);
         }
 
@@ -84,7 +93,12 @@ namespace BlockChain_FP_ITStep.Services
             rsa.FromXmlString(privateKeyXml);
             var publicKeyXml = rsa.ToXmlString(false);
 
+
             var minerAddress = Wallets.Values.FirstOrDefault(w => w.PublicKeyXml == publicKeyXml)?.Address;
+            if (minerAddress == null)
+                throw new Exception("Miner wallet not found. Register wallet first using the PUBLIC key.");
+
+
             decimal totalFee = Mempool.Sum(t => t.Fee);
             var txs = new List<Transaction>
             {
@@ -95,8 +109,8 @@ namespace BlockChain_FP_ITStep.Services
                     Amount = MinerReward + totalFee
                 }
             };
-
             txs.AddRange(Mempool);
+
             var newBlock = new Block(prevBlock.Index + 1, prevBlock.Hash);
             newBlock.SetTransaction(txs);
             newBlock.Mine(Difficulty);
@@ -104,13 +118,16 @@ namespace BlockChain_FP_ITStep.Services
             var privateParams = rsa.ExportParameters(true);
             newBlock.Sign(privateParams, publicKeyXml);
 
+            foreach (var tx in txs)
+                tx.Block = newBlock;
+
             db.Blocks.Add(newBlock);
+            db.Transactions.AddRange(txs);
             await db.SaveChangesAsync();
 
             Mempool.Clear();
             return newBlock;
         }
-
 
         public async Task<long> AddBlockAsync(string data, string privateKeyXml)
         {
@@ -288,6 +305,9 @@ namespace BlockChain_FP_ITStep.Services
             }).ToList();
         }
 
+
+
+        //  Старый Асинк метод - уже не нужен?  Но! тут остался СигналР
         public async Task<long> MineAsync(string privateKeyXml, CancellationToken ct, IProgress<int>? progress = null)
         {
             var blocks = await GetAllBlocksAsync();         // получаем текущую цепочку
@@ -358,6 +378,11 @@ namespace BlockChain_FP_ITStep.Services
             return -1;
         }
 
+        //=============================================// 
+
+
+
+
 
         // Demo Method, later be remooved...
         public (Wallet wallet, string privateKeyXml) CreateWallet(string displayName)
@@ -378,6 +403,48 @@ namespace BlockChain_FP_ITStep.Services
             return Convert.ToBase64String(sig);
         }
 
+
+        public async Task<Dictionary<string, decimal>> GetBalances(bool includeMempool = false)          // include memorypool -> false 
+        {
+            using var db = _dbFactory.CreateDbContext();
+            var blocks = await db.Blocks.Include(b => b.Transactions).OrderBy(b => b.Index).ToListAsync();
+
+            var balances = new Dictionary<string, decimal>();
+
+            foreach (var block in blocks)
+            {
+                foreach (var tran in block.Transactions)
+                {
+                    ApplyTransactionToBalances(balances, tran);
+                }
+            }
+
+            if (includeMempool)
+            {
+                foreach (var tran in Mempool)
+                {
+                    ApplyTransactionToBalances(balances, tran);
+                }
+            }
+            return balances;
+        }
+
+
+        private static void ApplyTransactionToBalances(Dictionary<string, decimal> balances, Transaction tx)
+        {
+            if(!balances.TryGetValue(tx.ToAddress, out var toBal))
+            {
+                toBal = 0;
+            }
+            balances[tx.ToAddress] = toBal + tx.Amount;
+
+            if(tx.FromAddress != "COINBASE")
+            {
+                if(!balances.TryGetValue(tx.FromAddress, out var fromBal))
+                    fromBal = 0;
+                balances[tx.FromAddress] = fromBal - (tx.Amount + tx.Fee);
+            }
+        }
 
 
     }

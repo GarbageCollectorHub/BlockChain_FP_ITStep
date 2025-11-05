@@ -32,35 +32,11 @@ namespace BlockChain_FP_ITStep.Controllers
             ViewBag.MempoolCount = _bcService.Mempool.Count;
             ViewBag.Mempool = _bcService.Mempool;
             ViewBag.Wallets = _bcService.Wallets.Values.ToList();
+
+            // l6 ?
+            ViewBag.Balances = await _bcService.GetBalances(true);
             return View(model);
         }
-
-
-        // Убрать после удаления ручного добавленяи блоков в UI
-        //[HttpPost]
-        //public async Task<IActionResult> Add(string data, string privateKey)
-        //{
-        //    if (string.IsNullOrWhiteSpace(data) || string.IsNullOrWhiteSpace(privateKey))
-        //    {
-        //        TempData["AlertMessage"] = "Please enter both data and private key.";
-        //        TempData["AlertType"] = "danger";
-        //        return RedirectToAction(nameof(Index));
-        //    }
-
-        //    try
-        //    {
-        //        long ms = await _bcService.AddBlockAsync(data, privateKey);
-        //        TempData["AlertMessage"] = "Block successfully added.";
-        //        TempData["AlertType"] = "success";
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        TempData["AlertMessage"] = "Error: " + ex.Message;
-        //        TempData["AlertType"] = "danger";
-        //    }
-
-        //    return RedirectToAction("Index");
-        //}
 
 
         // маршрут для генерации ключа
@@ -235,7 +211,15 @@ namespace BlockChain_FP_ITStep.Controllers
 
             tx.Signature = sig;
 
-            _bcService.CreateTransaction(tx);
+            try
+            {
+                _bcService.CreateTransaction(tx);
+            }
+            catch
+            {
+                TempData["Error"] = "Demo transaction failed.";
+                return RedirectToAction("Index");
+            }
 
             return RedirectToAction("Index");
         }
