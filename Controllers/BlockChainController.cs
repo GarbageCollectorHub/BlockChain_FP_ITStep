@@ -190,12 +190,14 @@ namespace BlockChain_FP_ITStep.Controllers
         }
 
         [HttpPost]
-        public IActionResult DemoSetup()
+        public async  Task<IActionResult> DemoSetup()
         {
-            var (Ivan,  prvKey)  = _bcService.CreateWallet("Ivan");
+            //var (Ivan,  prvKey)  = _bcService.CreateWallet("Ivan");
+            //var (Taras, prvKey2) = _bcService.CreateWallet("Taras");
+            var (Ivan, prvKey) = _bcService.CreateWallet("Ivan");
             var (Taras, prvKey2) = _bcService.CreateWallet("Taras");
 
-            decimal amount = 10.0m;
+            decimal amount = 7.0m;
             decimal fee = 0.5m;
 
             var tx = new Models.Transaction
@@ -207,6 +209,16 @@ namespace BlockChain_FP_ITStep.Controllers
                 Note = "Payment for services"
             };
 
+
+            for(int i = 0; i < 10; i++)
+            {
+                //await _bcService.MinePendingAsync(prvKey);
+                //await _bcService.MinePendingAsync(prvKey2);
+
+                await MinePending(prvKey);
+                await MinePending(prvKey2);
+            }
+
             var sig = BlockChainService.SignPayload(tx.CanonicalPayload(), prvKey);
 
             tx.Signature = sig;
@@ -215,12 +227,13 @@ namespace BlockChain_FP_ITStep.Controllers
             {
                 _bcService.CreateTransaction(tx);
             }
-            catch
+            catch (Exception ex)
             {
                 TempData["Error"] = "Demo transaction failed.";
                 return RedirectToAction("Index");
             }
 
+            TempData["Success"] = "Demo completed!";
             return RedirectToAction("Index");
         }
 

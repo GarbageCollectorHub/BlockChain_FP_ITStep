@@ -4,9 +4,10 @@
     ViewData["Title"] = "Index";
 
     // Default private key for input
-    string defaultPrivateKey = @"<RSAKeyValue><Modulus>0DSFyEx2VeKUC9H+IfgdIAZiEvbXwHCvTc2iuUWLDn5/xUzglahpSX1xvHY3oC9TYLxeTd2+Tv52To2lC5aJRKEpRVT9LvNJLZ9dJQk1e92iYPJDxJkvR7UfPhOHCyANn7xcDfFpkLBrTmZ9AEqFAov4GoWCLc6JT8guwbUBgT3rQk28YpQjabHNo4AseRPMxFJM7XRmAgAcmoJU2wEpLA+xXKVcqlxmJMqJjw3JnMkyzp8flnRovYDrFIyL1UvyyqIVLREfbN6IHJRxNWTyg8ZrXYJdCeeKuRCTUomG18S2R1hrW9iEpYxPgTY5VxAqQuWlrdUEBQBbWLc0BW+geQ==</Modulus><Exponent>AQAB</Exponent><P>7SfA5wMA3NUJw8cwVYmNfI3dcqavYEgbqlTaDfZpcW6gKMXqWlyap8J5yRpt3mWgOuoThdfDGSeJVUU5PukK7/TIIJMbcL6hMI6GS7wwf0cetBG7Cwb0mEjeiraMjQwpEhiJcY7wXOGYt6+RSny3x34t1ksXl/IzGyhR3y+1qw8=</P><Q>4L/ckc91Bd6euU9HqudHu4zrxAcouiwy1Lu5MhW9DbInJS29D6w7yC4BrRbKFrSS650hWr6V+mchWdhZaO7MWiRv1Fg6JkguRS0yTp8f+7usG4cq9IigVL/uzpUaG18W37oXYB8J9dmmI218RycFYkAPLUgQoClaUUZKXL4TG/c=</Q><DP>g/jZWjTLqBhNhMs11IPlXmi70O99LMEz1AfACIEVkHAVZFsu3PYngi+xAf5ZIafAEMjt8E9vXHIp9G+/OYkJ8xpuu+HhJU6P+Kt3hHHHMyzqox4yziIivxPd86c+c8dOm6lX4v++NpG8IIvs+FyLENLgwx2qlX3MftJjLSYpnHU=</DP><DQ>bZTepLF0K2J6HXxMQ0X1MbrqEXA0KWH3fsXw7DyxKwZcE8KTVhryIw5bftuHuT5eDEdWxfn7AlZaaoYUQhd8x87QP8asw5GaDdyVlMP9Qi4lIl7rUMN0+R2EAHGugv4AFyGS2CkKIDb4zHlLiR27gEYfoEJs6MqA4PPWuhVrF80=</DQ><InverseQ>prHe1y2p49xN/ieDX6ul8hIO3jiFxZP6+UfiCyV32ZpnWqPs2wYz4kI48UbrJmyi3yKXsgpnGIOV7F8cbn2gTBHAWQ9vq3l2RXlsFMr2np8/5qs2g8VtSUs+Pq6jg2msAN6smSS7lz/+04RfUZXeQ/VbWi8pCQfOHzmEEE6IRT4=</InverseQ><D>NJcvu7pkoakL0DiIwrfTU4WJPFURhlBwV2y7z6SbTVvyljmm+OaDQcbn9by+rD2ICAVMpMqACaAI7iqlJ9osbiNvM04WbceSEm4Qrww2cEU5gNdw+rXe1XQQojN4hvzftBt1/SefjKajVDhbFrm8Azqrvrc+fKeQ05AzD0bTTHuMxp2DU2Hw4opTyGvqA2MbVf+EmSi3hOD6dB7p2J4vGY59XcXXhak62VeoAqnCdgHEtD1IEJTW3W/L0cSpLBpNihLOdwwRlgX0lHazPH6y+OeVHwKIMh+wKReyDo87s5mNrhW6QcrAPPi3j50dTxSGKvwVhjtjfmJDquqJBCBnCQ==</D></RSAKeyValue>";
-    string defaultPublicKey = @"<RSAKeyValue><Modulus>0DSFyEx2VeKUC9H+IfgdIAZiEvbXwHCvTc2iuUWLDn5/xUzglahpSX1xvHY3oC9TYLxeTd2+Tv52To2lC5aJRKEpRVT9LvNJLZ9dJQk1e92iYPJDxJkvR7UfPhOHCyANn7xcDfFpkLBrTmZ9AEqFAov4GoWCLc6JT8guwbUBgT3rQk28YpQjabHNo4AseRPMxFJM7XRmAgAcmoJU2wEpLA+xXKVcqlxmJMqJjw3JnMkyzp8flnRovYDrFIyL1UvyyqIVLREfbN6IHJRxNWTyg8ZrXYJdCeeKuRCTUomG18S2R1hrW9iEpYxPgTY5VxAqQuWlrdUEBQBbWLc0BW+geQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+    string defaultPrivateKey = @"<RSAKeyValue><Modulus>pIo7HP6rlwTA/vVvx7KxT1lzWEZTPI7isOGhIm1Rr5EoxxuzrrS0oHSGsEApR+uV7kgjNMEz/r2f/4fwuDGi55yPst7PWEgd1JgI6K6CvKtycah4gc3JOUpgy2cbGwK3Sp8zvbmKj4GOMBAWsNDjRxiE+gRWLADGrxu1ADB+dh3jO28g76kozvU2DDiSdB854evjzaMnc1z0CiRqIjNfHSHnWaPYP9ni16fXhlD11A4/mo/4SBVcpz3wFYhMVGRkPQx1BVFgbRiAbFHPZRAxsl8BluVXMugY1f9BYc3er6W/0wlMtdtVjLc87fsGNpSMo6mdQ992X911cpy8u1skLQ==</Modulus><Exponent>AQAB</Exponent><P>0AqqP3kLD+GvGVxDZSMB+7/wxiiHAzA+LVPjyQWpPJrEyXsWk0e6sLsDkFsJq5bb1eWZi3SFio87nngW07wyTeViIoNQimVquXbAyiEXRC2znZ5PAxudazr/qtvmqtI2fGAJV+5urIPyfKNRdifDjP/t8eHEBRGV7Ds1AWCnTlM=</P><Q>ynhdPwr+aS5VB7n4QnD3Dzd1hZvjNUg/XqXegjdnwAIyK908MP5tUpIKq1XF5IW4JlTty9WN5SE9CdcGxJqnvy+A47wqMgdIbPtvR4bDRfuGNiiuQg9sUR3HZmnCn9Pp5F66wXl9SuMNi98sbshltSsmVlL2UYI2NGdDPWGkc38=</Q><DP>j8TvBlI17NG/2bzC7l+U/U8VqztSokdykIyKu97np3QlTj97yGgngf6bZeUj96qXXWgABjmOF8UIJGlFDSnfcal1efhZbmrLqEOC06yukXUrzV8bp0AsN3BcQs0YyS/ga29KxbOGVD4TE0MiBo9QOl6bJy8n8YDHpKr95GfQ9vU=</DP><DQ>F4tZpIwdu5N0tdpNYUSLpkxXsTrIeBi3rcTyFAhnWy+mL+2hIz1i7xgmf3gQ9BsMqAB2Sp7BymRMGcnUcqZdXWEjxtfJvFmWdX3jmdi0+n1eRQwD/5CVkvU4i9M+m6Fj8HeHlhoPlNbEa4B/RT6ufRvQcHdjR2Ux8nQToJ6rJfc=</DQ><InverseQ>uV0G19k6X3y15H4rdjDQpGj2fbNp6Cmtb/6P3EFM98WQd0TseJBGGhz39wRACuBbOLg2QPzp4ZszJln+1jG668kWqACod1blYj4We+7fbJhqa3hNzlGPVY7ImZBV408So8kT2esrhUYB2SEfd4P9N6MCmbsMf+MrBgSIVmSUWCE=</InverseQ><D>RwYICDcB2FlL+YH2Myw2DztcZ7FLgqtmvNVYGaU4imFNSczyXapRAaXq8a9wYkQV3toyoDX5fK9bnhCO3uNGH1XcTWiR9diDT94kklOpyUj0SI1hHx62Ck3JxGMINzuP5N0dl3q8jb9tod9/++jfAjRaShWPIMVg/fsmwSMto0wIM9lAKdavJOupkZkPxZuVytPJ0clKlu3SXKgOD/gsrohbGChoR/L4vDocIygMwQs8g/qVi69HGyoDFmm+seWCQ6rGzw0ck7MsCKWB4meDntZ2lPTmu5DHOaIEWlGLuSRh6z0HrU9ywzL2pKNJtrzfU3eaVMRAmnSsuH/YBKcYXQ==</D></RSAKeyValue>";
+    string defaultPublicKey  = @"<RSAKeyValue><Modulus>pIo7HP6rlwTA/vVvx7KxT1lzWEZTPI7isOGhIm1Rr5EoxxuzrrS0oHSGsEApR+uV7kgjNMEz/r2f/4fwuDGi55yPst7PWEgd1JgI6K6CvKtycah4gc3JOUpgy2cbGwK3Sp8zvbmKj4GOMBAWsNDjRxiE+gRWLADGrxu1ADB+dh3jO28g76kozvU2DDiSdB854evjzaMnc1z0CiRqIjNfHSHnWaPYP9ni16fXhlD11A4/mo/4SBVcpz3wFYhMVGRkPQx1BVFgbRiAbFHPZRAxsl8BluVXMugY1f9BYc3er6W/0wlMtdtVjLc87fsGNpSMo6mdQ992X911cpy8u1skLQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
     
+
     var mempool = ViewBag.Mempool as List<Transaction>;
     var mempoolCount = (int)ViewBag.MempoolCount;
     var wallets = ViewBag.Wallets as List<Wallet>;
@@ -38,14 +39,15 @@ else
 {
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            showToast("@TempData["Error"]", true);
+            showToast('@TempData["Error"]', true);
         });
     </script>
+    TempData.Remove("Error");
 }
 
 <div style="display:flex; flex-direction:row">
     <textarea rows="4">Private key -> @defaultPrivateKey </textarea>
-    <textarea rows="4">Public key -> @defaultPublicKey  </textarea>
+    <textarea rows="4">Public  key -> @defaultPublicKey  </textarea>
 </div>
 
 

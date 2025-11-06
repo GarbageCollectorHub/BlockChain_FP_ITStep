@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Xml.Linq;
 
 namespace BlockChain_FP_ITStep.Services
 {
@@ -16,7 +17,7 @@ namespace BlockChain_FP_ITStep.Services
         public static int Difficulty { get; set; } = 3;
        
 
-        public Dictionary<string, Wallet> Wallets { get; set; } = new();
+        public Dictionary<string, Wallet> Wallets {   get; set; } = new();
         public List<Transaction> Mempool { get; set; } = new();
         public const decimal MinerReward = 1.0m;
 
@@ -77,7 +78,7 @@ namespace BlockChain_FP_ITStep.Services
             balances.TryGetValue(transaction.FromAddress, out var fromBalance);
 
             var required = transaction.Amount + transaction.Fee;
-            if (fromBalance < required && transaction.FromAddress != "COINBASE")
+            if (fromBalance < required)
                 throw new Exception("Insufficient funds");
 
             Mempool.Add(transaction);
@@ -86,7 +87,7 @@ namespace BlockChain_FP_ITStep.Services
         public async Task<Block> MinePendingAsync(string privateKeyXml)
         {
             using var db = _dbFactory.CreateDbContext();
-            var prevBlock = await db.Blocks.OrderBy(b => b.Index).LastAsync();
+            var prevBlock = await db.Blocks.OrderBy(b => b.Index).LastOrDefaultAsync();
 
             // Получаем публичный ключ фром private
             using var rsa = RSA.Create();
@@ -305,8 +306,6 @@ namespace BlockChain_FP_ITStep.Services
             }).ToList();
         }
 
-
-
         //  Старый Асинк метод - уже не нужен?  Но! тут остался СигналР
         public async Task<long> MineAsync(string privateKeyXml, CancellationToken ct, IProgress<int>? progress = null)
         {
@@ -382,16 +381,14 @@ namespace BlockChain_FP_ITStep.Services
 
 
 
-
-
-        // Demo Method, later be remooved...
+        // Demo Method, later be remooved...but now using in Demo Setup (dmeo btn)
         public (Wallet wallet, string privateKeyXml) CreateWallet(string displayName)
         {
             var rsa = RSA.Create();
             var privateKeyXml = rsa.ToXmlString(true);
             var publicKeyXml = rsa.ToXmlString(false);
             var wallet = RegisterWallet(publicKeyXml, displayName);
-            return(wallet, privateKeyXml);
+            return (wallet, privateKeyXml);
         }
 
         public static string SignPayload(string payload, string privateKeyXml)
@@ -402,7 +399,6 @@ namespace BlockChain_FP_ITStep.Services
             var sig = rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             return Convert.ToBase64String(sig);
         }
-
 
         public async Task<Dictionary<string, decimal>> GetBalances(bool includeMempool = false)          // include memorypool -> false 
         {
@@ -429,7 +425,6 @@ namespace BlockChain_FP_ITStep.Services
             return balances;
         }
 
-
         private static void ApplyTransactionToBalances(Dictionary<string, decimal> balances, Transaction tx)
         {
             if(!balances.TryGetValue(tx.ToAddress, out var toBal))
@@ -445,6 +440,56 @@ namespace BlockChain_FP_ITStep.Services
                 balances[tx.FromAddress] = fromBal - (tx.Amount + tx.Fee);
             }
         }
+
+        // ===  Nodes les  ===
+
+        public bool TryAddExternalBlock(List<Block> chain)
+        {
+            for (int i = 0; i < chain.Count - 1; i++)
+            {
+                var lastBlock = chain[i];
+                if (chain.First() != chain[i])
+                {
+                    if (chain[i].PrevHash != lastBlock.Hash)
+                        return false;
+                }
+
+                if (!chain[i].HasValidProof())
+                    return false;
+                if (!chain[i].Verify())
+                    return false;
+                if (chain[i].Hash != chain[i].ComputeHash())
+                    return false;
+            }
+
+            if (chain.Count < Chain.Count)
+                return false;
+
+            Chain.Clear();
+            Chain.AddRange(chain);
+            return true;
+        }
+
+
+        private void BroadcastChainBlock(string nodeId)
+        {
+            var fromNode = GetNode(nodeId);
+
+            foreach (var (_nodeId, node) in _nodes)
+            {
+                if (_nodeId == nodeId) continue;
+                try
+                {
+                    node.TryAddExternalBlock(fromNode.Chain);
+                }
+                catch
+                {
+                    throw new Exception($"Failed to add block to node {_nodeId}");
+                }
+            }
+        }
+
+
 
 
     }
