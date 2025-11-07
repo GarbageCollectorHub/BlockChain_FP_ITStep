@@ -6,12 +6,13 @@
     // Default private key for input
     string defaultPrivateKey = @"<RSAKeyValue><Modulus>pIo7HP6rlwTA/vVvx7KxT1lzWEZTPI7isOGhIm1Rr5EoxxuzrrS0oHSGsEApR+uV7kgjNMEz/r2f/4fwuDGi55yPst7PWEgd1JgI6K6CvKtycah4gc3JOUpgy2cbGwK3Sp8zvbmKj4GOMBAWsNDjRxiE+gRWLADGrxu1ADB+dh3jO28g76kozvU2DDiSdB854evjzaMnc1z0CiRqIjNfHSHnWaPYP9ni16fXhlD11A4/mo/4SBVcpz3wFYhMVGRkPQx1BVFgbRiAbFHPZRAxsl8BluVXMugY1f9BYc3er6W/0wlMtdtVjLc87fsGNpSMo6mdQ992X911cpy8u1skLQ==</Modulus><Exponent>AQAB</Exponent><P>0AqqP3kLD+GvGVxDZSMB+7/wxiiHAzA+LVPjyQWpPJrEyXsWk0e6sLsDkFsJq5bb1eWZi3SFio87nngW07wyTeViIoNQimVquXbAyiEXRC2znZ5PAxudazr/qtvmqtI2fGAJV+5urIPyfKNRdifDjP/t8eHEBRGV7Ds1AWCnTlM=</P><Q>ynhdPwr+aS5VB7n4QnD3Dzd1hZvjNUg/XqXegjdnwAIyK908MP5tUpIKq1XF5IW4JlTty9WN5SE9CdcGxJqnvy+A47wqMgdIbPtvR4bDRfuGNiiuQg9sUR3HZmnCn9Pp5F66wXl9SuMNi98sbshltSsmVlL2UYI2NGdDPWGkc38=</Q><DP>j8TvBlI17NG/2bzC7l+U/U8VqztSokdykIyKu97np3QlTj97yGgngf6bZeUj96qXXWgABjmOF8UIJGlFDSnfcal1efhZbmrLqEOC06yukXUrzV8bp0AsN3BcQs0YyS/ga29KxbOGVD4TE0MiBo9QOl6bJy8n8YDHpKr95GfQ9vU=</DP><DQ>F4tZpIwdu5N0tdpNYUSLpkxXsTrIeBi3rcTyFAhnWy+mL+2hIz1i7xgmf3gQ9BsMqAB2Sp7BymRMGcnUcqZdXWEjxtfJvFmWdX3jmdi0+n1eRQwD/5CVkvU4i9M+m6Fj8HeHlhoPlNbEa4B/RT6ufRvQcHdjR2Ux8nQToJ6rJfc=</DQ><InverseQ>uV0G19k6X3y15H4rdjDQpGj2fbNp6Cmtb/6P3EFM98WQd0TseJBGGhz39wRACuBbOLg2QPzp4ZszJln+1jG668kWqACod1blYj4We+7fbJhqa3hNzlGPVY7ImZBV408So8kT2esrhUYB2SEfd4P9N6MCmbsMf+MrBgSIVmSUWCE=</InverseQ><D>RwYICDcB2FlL+YH2Myw2DztcZ7FLgqtmvNVYGaU4imFNSczyXapRAaXq8a9wYkQV3toyoDX5fK9bnhCO3uNGH1XcTWiR9diDT94kklOpyUj0SI1hHx62Ck3JxGMINzuP5N0dl3q8jb9tod9/++jfAjRaShWPIMVg/fsmwSMto0wIM9lAKdavJOupkZkPxZuVytPJ0clKlu3SXKgOD/gsrohbGChoR/L4vDocIygMwQs8g/qVi69HGyoDFmm+seWCQ6rGzw0ck7MsCKWB4meDntZ2lPTmu5DHOaIEWlGLuSRh6z0HrU9ywzL2pKNJtrzfU3eaVMRAmnSsuH/YBKcYXQ==</D></RSAKeyValue>";
     string defaultPublicKey  = @"<RSAKeyValue><Modulus>pIo7HP6rlwTA/vVvx7KxT1lzWEZTPI7isOGhIm1Rr5EoxxuzrrS0oHSGsEApR+uV7kgjNMEz/r2f/4fwuDGi55yPst7PWEgd1JgI6K6CvKtycah4gc3JOUpgy2cbGwK3Sp8zvbmKj4GOMBAWsNDjRxiE+gRWLADGrxu1ADB+dh3jO28g76kozvU2DDiSdB854evjzaMnc1z0CiRqIjNfHSHnWaPYP9ni16fXhlD11A4/mo/4SBVcpz3wFYhMVGRkPQx1BVFgbRiAbFHPZRAxsl8BluVXMugY1f9BYc3er6W/0wlMtdtVjLc87fsGNpSMo6mdQ992X911cpy8u1skLQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
-    
+
 
     var mempool = ViewBag.Mempool as List<Transaction>;
     var mempoolCount = (int)ViewBag.MempoolCount;
     var wallets = ViewBag.Wallets as List<Wallet>;
     var balances = ViewBag.Balances as Dictionary<string, decimal>;
+    var nodeId = @ViewBag.NodeId as string;
 }
 
 @* alert -> IsChain Valid  *@
@@ -51,6 +52,27 @@ else
 </div>
 
 
+@* Переключатель нод *@
+<form method="get" asp-action="Index" style="display:inline-block">
+    <label>Select node:</label>
+
+    <select name="nodeId">
+        @foreach (var n in ViewBag.Nodes)
+        {
+            if (n == ViewBag.NodeId)
+            {
+                <option value="@n" selected>@n</option>
+            }
+            else
+            {
+                <option value="@n">@n</option>
+            }
+        }
+    </select>
+
+    <button type="submit">Switch</button>
+</form>
+
 
 <hr />
 
@@ -60,11 +82,13 @@ else
 <div style="display:flex; flex-direction:row" style="margin:20px">
    @*  DEMO SETUP BTN *@
     <form method="post" asp-action="DemoSetup" style="margin:20px">
+        <input type="hidden" name="nodeId" value="@nodeId" />
         <input type="submit" value="START DEMO"/>
     </form>
 
    @*  NEW START MINE *@
     <form method="post" asp-action="MinePending" style="margin:20px">
+        <input type="hidden" name="nodeId" value="@nodeId" />
         <input type="text" name="privateKey" placeholder="Enter private key" />
         <input type="submit" value="START MINE" />
     </form>
@@ -87,6 +111,7 @@ else
     <!-- Difficulty setter -->
     <form method="post" asp-action="SetDifficulty" style="margin:20px" novalidate>
         <div class="input-group">
+            <input type="hidden" name="nodeId" value="@nodeId" />
             <input type="text" name="difficulty" class="form-control" placeholder="set difficulty" />
             <button type="submit" class="btn btn-primary">Set</button>
         </div>
@@ -108,6 +133,7 @@ else
         <div>
             <h3>Register Wallet</h3>
             <form method="post" asp-action="RegisterWallet">
+                <input type="hidden" name="nodeId" value="@nodeId" />
                 <input type="text" name="displayName" placeholder="Enter wallet owner name" />
                 <input type="text" name="publicKeyXml" placeholder="Enter Public Key XML" />
                 <input type="submit" value="Register Wallet">
@@ -164,14 +190,15 @@ else
         <hr />
 
 
-        @* Create/ADd Transaction to Memory pool *@
+        @* Create Transaction and add to Memory pool *@
         <div>
             <h3>Memory pool</h3>
-            <form method="post" asp-action="CreateTransaction" style="margin:15px">
+            <form method="post" asp-action="CreateTransaction" style="margin:15px" novalidate>
+                <input type="hidden" name="nodeId" value="@nodeId" />
                 <input name="fromAddress" type="text" placeholder="From Address (ADDR_...)" />
                 <input name="toAddress" type="text" placeholder="To Address (ADDR_...)" />
                 <input name="Amount" type="number" placeholder="Amount" />
-                <input name="fee" type="number" placeholder="Fee" />
+                <input name="fee" type="number" step="0.01" placeholder="Fee" />
                 <input name="privateKey" type="text" placeholder="Private Key" />
                 <input name="note" type="text" placeholder="note" />
                 <input type="submit" value="Add to mempool"/>
@@ -554,7 +581,7 @@ else
         //     .closest("form")
         //     .addEventListener("submit", function (e) {
         //         e.preventDefault(); // блокируем обычный POST
-
+         
         //         const privateKey = this.querySelector("input[name='privateKey']").value;
         //         if (!privateKey.trim()) {
         //             showToast("Enter private key before mining!", true);

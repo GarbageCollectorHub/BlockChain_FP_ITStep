@@ -16,11 +16,9 @@ namespace BlockChain_FP_ITStep.Services
         private readonly IHubContext<MiningHub> _hub;    // MiningHub (SignalR)
         public static int Difficulty { get; set; } = 3;
        
-
         public Dictionary<string, Wallet> Wallets {   get; set; } = new();
         public List<Transaction> Mempool { get; set; } = new();
         public const decimal MinerReward = 1.0m;
-
 
 
         public BlockChainService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<MiningHub> hub)
@@ -30,24 +28,24 @@ namespace BlockChain_FP_ITStep.Services
 
             using var db = _dbFactory.CreateDbContext();
             InitGenBlock(db);
+            InitNodes(db);
         }
 
         private void InitGenBlock(ApplicationDbContext db)
         {
-            if (!db.Blocks.Any())
-            {
-                using var rsa = RSA.Create(2048);
-                var privateKey = rsa.ExportParameters(true);
-                var publicKeyXml = rsa.ToXmlString(false);
+            if (db.Blocks.Any(b => b.NodeId == null))
+                return;
 
-                var genBlock = new Block(0, "");
-                genBlock.Sign(privateKey, publicKeyXml);
+            var genesis = new Block(
+                index: 0,
+                prevHash: "0",
+                dateTime: new DateTime(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc)
+            );
 
-                db.Blocks.Add(genBlock);
-                db.SaveChanges();
-            }
+            db.Blocks.Add(genesis);
+            db.SaveChanges();
         }
-        
+
         public Wallet RegisterWallet(string publicKeyXml, string displayName)
         {
             var wallet = new Wallet
@@ -60,8 +58,10 @@ namespace BlockChain_FP_ITStep.Services
             return wallet;
         }
 
-        public void CreateTransaction(Transaction transaction)
+        public void CreateTransaction(Transaction transaction, string nodeId)
         {
+            transaction.NodeId = nodeId;
+
             var rsa = RSA.Create();
             var wallet = Wallets[transaction.FromAddress];
 
@@ -69,79 +69,90 @@ namespace BlockChain_FP_ITStep.Services
             var payload = Encoding.UTF8.GetBytes(transaction.CanonicalPayload());
             var sig = Convert.FromBase64String(transaction.Signature);
 
-            if(!rsa.VerifyData(payload, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
-            {
+            if (!rsa.VerifyData(payload, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
                 throw new Exception("Invalid Transaction Signature");
-            }
 
-            var balances = GetBalances(includeMempool: false).Result;                       // include memorypool -> false 
+            var balances = GetBalances(nodeId, includeMempool: false).Result;               // include memorypool -> false 
             balances.TryGetValue(transaction.FromAddress, out var fromBalance);
 
             var required = transaction.Amount + transaction.Fee;
             if (fromBalance < required)
                 throw new Exception("Insufficient funds");
 
-            Mempool.Add(transaction);
+            Mempool.Add(transaction); // общий список, но каждая транзакция помечена nodeId
         }
 
-        public async Task<Block> MinePendingAsync(string privateKeyXml)
+        public async Task<Block> MinePendingAsync(string privateKeyXml, string nodeId)
         {
             using var db = _dbFactory.CreateDbContext();
-            var prevBlock = await db.Blocks.OrderBy(b => b.Index).LastOrDefaultAsync();
 
-            // Получаем публичный ключ фром private
+            var prevBlock = await db.Blocks
+                .Where(b => b.NodeId == nodeId)
+                .OrderBy(b => b.Index)
+                .LastOrDefaultAsync();
+
+
+            if (prevBlock == null)
+                throw new Exception($"Node {nodeId} has no genesis block!");
+            //-----------
+
             using var rsa = RSA.Create();
             rsa.FromXmlString(privateKeyXml);
             var publicKeyXml = rsa.ToXmlString(false);
 
+            var minerAddress = Wallets.Values.FirstOrDefault(w => w.PublicKeyXml == publicKeyXml)?.Address
+                ?? throw new Exception("Miner wallet not found. Register wallet first using the PUBLIC key.");
 
-            var minerAddress = Wallets.Values.FirstOrDefault(w => w.PublicKeyXml == publicKeyXml)?.Address;
-            if (minerAddress == null)
-                throw new Exception("Miner wallet not found. Register wallet first using the PUBLIC key.");
+            decimal totalFee = Mempool.Where(t => t.NodeId == nodeId).Sum(t => t.Fee);
 
-
-            decimal totalFee = Mempool.Sum(t => t.Fee);
             var txs = new List<Transaction>
             {
                 new Transaction
                 {
+                    NodeId = nodeId,
                     FromAddress = "COINBASE",
                     ToAddress = minerAddress,
                     Amount = MinerReward + totalFee
                 }
             };
-            txs.AddRange(Mempool);
 
-            var newBlock = new Block(prevBlock.Index + 1, prevBlock.Hash);
+            txs.AddRange(Mempool.Where(t => t.NodeId == nodeId));
+
+            var newBlock = new Block((prevBlock?.Index ?? 0) + 1, prevBlock?.Hash ?? "0")
+            {
+                NodeId = nodeId
+            };
             newBlock.SetTransaction(txs);
             newBlock.Mine(Difficulty);
 
             var privateParams = rsa.ExportParameters(true);
             newBlock.Sign(privateParams, publicKeyXml);
 
-            foreach (var tx in txs)
-                tx.Block = newBlock;
+            foreach (var tx in txs) tx.Block = newBlock;
 
             db.Blocks.Add(newBlock);
             db.Transactions.AddRange(txs);
             await db.SaveChangesAsync();
 
-            Mempool.Clear();
+            // очищаем только транзакции этой ноды
+            Mempool.RemoveAll(t => t.NodeId == nodeId);
+
             return newBlock;
         }
 
-        public async Task<long> AddBlockAsync(string data, string privateKeyXml)
+        public async Task<long> AddBlockAsync(string data, string privateKeyXml, string nodeId)
         {
             try
             {
-                var blocks = await GetAllBlocksAsync();
+                var blocks = await GetAllBlocksAsync(nodeId);
                 var prevBlock = blocks.LastOrDefault();
                 if (prevBlock == null) return 0;
 
                 using var db = _dbFactory.CreateDbContext();
 
                 // Проверка что блок на этой позиции ещё не существует
-                var exists = await db.Blocks.AnyAsync(b => b.Index == blocks.Count);
+                //var exists = await db.Blocks.AnyAsync(b => b.Index == blocks.Count);
+                var exists = await db.Blocks.AnyAsync(b => b.NodeId == nodeId && b.Index == blocks.Count);
                 if (exists)
                 {
                     throw new InvalidOperationException("Block position conflict");
@@ -184,10 +195,14 @@ namespace BlockChain_FP_ITStep.Services
             }
         }
 
-        public async Task<List<Block>> GetAllBlocksAsync()
+        public async Task<List<Block>> GetAllBlocksAsync(string nodeId)
         {
             using var db = _dbFactory.CreateDbContext();
-            return await db.Blocks.OrderBy(b => b.Index).ToListAsync();
+            return await db.Blocks
+                .Where(b => b.NodeId == nodeId)
+                .Include(b => b.Transactions)
+                .OrderBy(b => b.Index)
+                .ToListAsync();
         }
 
         public async Task<Block?> GetBlockByIndexAsync(int index)
@@ -220,9 +235,9 @@ namespace BlockChain_FP_ITStep.Services
             return true;
         }
 
-        public async Task<bool> IsValidAsync()
+        public async Task<bool> IsValidAsync(string nodeId)
         {
-            var blocks = await GetAllBlocksAsync();
+            var blocks = await GetAllBlocksAsync(nodeId);
 
             for (int i = 1; i < blocks.Count; i++)
             {
@@ -237,16 +252,15 @@ namespace BlockChain_FP_ITStep.Services
             return true;
         }
 
-        public async Task<List<BlockValidationViewModel>> GetValidatedBlocksAsync()
+        public async Task<List<BlockValidationViewModel>> GetValidatedBlocksAsync(string nodeId)
         {
-            var blocks = await GetAllBlocksAsync();
+            var blocks = await GetAllBlocksAsync(nodeId);
             var result = new List<BlockValidationViewModel>();
             bool stillValid = true;
 
             for (int i = 0; i < blocks.Count; i++)
             {
                 bool isValid = true;
-
                 if (i > 0)
                 {
                     var prev = blocks[i - 1];
@@ -258,19 +272,11 @@ namespace BlockChain_FP_ITStep.Services
                             isValid = false;
                         }
                     }
-                    else
-                    {
-                        isValid = false; // всё после повреждённого блока — не валидно
-                    }
+                    else isValid = false;    // всё после повреждённого блока — не валидно
                 }
 
-                result.Add(new BlockValidationViewModel
-                {
-                    Block = blocks[i],
-                    IsValid = isValid
-                });
+                result.Add(new BlockValidationViewModel { Block = blocks[i], IsValid = isValid });
             }
-
             return result;
         }
 
@@ -295,21 +301,25 @@ namespace BlockChain_FP_ITStep.Services
             }
         }
 
-        // Валидация сигнатуры для valid/invalid signature в Index() 
-        public async Task<List<BlockValidationViewModel>> GetSignatureValidationAsync()
+
+        // Валидация сигнатуры для valid/invalid signature в Index()
+        public async Task<List<BlockValidationViewModel>> GetSignatureValidationAsync(string nodeId)
         {
-            var blocks = await GetAllBlocksAsync();
+            var blocks = await GetAllBlocksAsync(nodeId);
+
             return blocks.Select(b => new BlockValidationViewModel
             {
                 Block = b,
-                IsValid = b.Verify()
+                IsValid = b.Index == 0 ? true : b.Verify()
             }).ToList();
         }
 
+
+        //=============================================// 
         //  Старый Асинк метод - уже не нужен?  Но! тут остался СигналР
-        public async Task<long> MineAsync(string privateKeyXml, CancellationToken ct, IProgress<int>? progress = null)
+        public async Task<long> MineAsync(string privateKeyXml, string nodeId, CancellationToken ct, IProgress<int>? progress = null)
         {
-            var blocks = await GetAllBlocksAsync();         // получаем текущую цепочку
+            var blocks = await GetAllBlocksAsync(nodeId);         // получаем текущую цепочку
             var prevBlock = blocks.Last();
             var newBlock = new Block(blocks.Count, prevBlock.Hash)
             {
@@ -400,27 +410,27 @@ namespace BlockChain_FP_ITStep.Services
             return Convert.ToBase64String(sig);
         }
 
-        public async Task<Dictionary<string, decimal>> GetBalances(bool includeMempool = false)          // include memorypool -> false 
+        public async Task<Dictionary<string, decimal>> GetBalances(string nodeId, bool includeMempool = false)
         {
             using var db = _dbFactory.CreateDbContext();
-            var blocks = await db.Blocks.Include(b => b.Transactions).OrderBy(b => b.Index).ToListAsync();
+
+            var blocks = await db.Blocks
+                .Where(b => b.NodeId == nodeId)
+                .Include(b => b.Transactions)
+                .OrderBy(b => b.Index)
+                .ToListAsync();
 
             var balances = new Dictionary<string, decimal>();
 
             foreach (var block in blocks)
-            {
-                foreach (var tran in block.Transactions)
-                {
-                    ApplyTransactionToBalances(balances, tran);
-                }
-            }
+                foreach (var tx in block.Transactions)
+                    ApplyTransactionToBalances(balances, tx);
 
             if (includeMempool)
             {
-                foreach (var tran in Mempool)
-                {
-                    ApplyTransactionToBalances(balances, tran);
-                }
+                // фильтруем общий Mempool по nodeId
+                foreach (var tx in Mempool.Where(t => t.NodeId == nodeId))
+                    ApplyTransactionToBalances(balances, tx);
             }
             return balances;
         }
@@ -443,51 +453,179 @@ namespace BlockChain_FP_ITStep.Services
 
         // ===  Nodes les  ===
 
-        public bool TryAddExternalBlock(List<Block> chain)
+        public async Task<bool> TryAddExternalChainAsync(List<Block> incoming, string nodeId)
         {
-            for (int i = 0; i < chain.Count - 1; i++)
+            using var db = _dbFactory.CreateDbContext();
+
+            var current = await GetChainAsync(nodeId);
+            if (incoming.Count <= current.Count)
+                return false;
+
+            // Проверка целостности входящей цепочки
+            for (int i = 0; i < incoming.Count; i++)
             {
-                var lastBlock = chain[i];
-                if (chain.First() != chain[i])
+                var cur = incoming[i];
+
+                // Пропускаем проверку GENESIS блока (index = 0)
+                if (cur.Index == 0)
+                    continue;
+
+                var prev = incoming[i - 1];
+
+                if (cur.PrevHash != prev.Hash) return false;
+                if (cur.Hash != cur.ComputeHash()) return false;
+
+                // Верификация подписи для НЕ genesis блока
+                if (!string.IsNullOrEmpty(cur.Signature))
                 {
-                    if (chain[i].PrevHash != lastBlock.Hash)
+                    if (!cur.Verify())
                         return false;
                 }
 
-                if (!chain[i].HasValidProof())
-                    return false;
-                if (!chain[i].Verify())
-                    return false;
-                if (chain[i].Hash != chain[i].ComputeHash())
-                    return false;
+                // Проверка POW только если есть nonce (генезис без POW)
+                if (!cur.HashValidProof()) return false;
             }
 
-            if (chain.Count < Chain.Count)
-                return false;
+            // Сначала удаляем транзакции этой ноды
+            db.Transactions.RemoveRange(
+                db.Transactions.Where(t => t.NodeId == nodeId)
+            );
+            await db.SaveChangesAsync();
 
-            Chain.Clear();
-            Chain.AddRange(chain);
+            // Теперь удаляем блоки этой ноды
+            db.Blocks.RemoveRange(
+                db.Blocks.Where(b => b.NodeId == nodeId)
+            );
+            await db.SaveChangesAsync();
+
+            // Вставляем новую цепочку (глубокое копирование данных)
+            foreach (var s in incoming)
+            {
+                Block clone;
+
+                // Для genesis используем конструктор с DateTime, БЕЗ подписи
+                if (s.Index == 0)
+                {
+                    clone = new Block(s.Index, s.PrevHash, s.Timestamp)
+                    {
+                        Hash = s.Hash,
+                        NodeId = nodeId,
+                        MiningDurationMs = s.MiningDurationMs,
+                        Nonce = s.Nonce,
+                        Difficulty = s.Difficulty
+                    };
+                }
+                else
+                {
+                    // Обычные блоки
+                    clone = new Block(s.Index, s.PrevHash)
+                    {
+                        Timestamp = s.Timestamp,
+                        Hash = s.Hash,
+                        NodeId = nodeId,
+                        MiningDurationMs = s.MiningDurationMs,
+                        Nonce = s.Nonce,
+                        Difficulty = s.Difficulty
+                    };
+
+                    clone.UpdatePublicKey(s.PublicKeyXml);
+                    clone.UpdateSignature(s.Signature);
+                }
+
+                foreach (var t in s.Transactions)
+                {
+                    var nt = new Transaction
+                    {
+                        NodeId = nodeId,
+                        FromAddress = t.FromAddress,
+                        ToAddress = t.ToAddress,
+                        Amount = t.Amount,
+                        Fee = t.Fee,
+                        Note = t.Note
+                    };
+
+                    clone.Transactions.Add(nt);
+                }
+
+                db.Blocks.Add(clone);
+            }
+
+            await db.SaveChangesAsync();
             return true;
         }
 
 
-        private void BroadcastChainBlock(string nodeId)
-        {
-            var fromNode = GetNode(nodeId);
 
-            foreach (var (_nodeId, node) in _nodes)
+        public async Task BroadcastChainAsync(string sourceNodeId)
+        {
+            var fullChain = await GetChainAsync(sourceNodeId);
+            var nodes = await GetNodeIdsAsync();
+
+            foreach (var nodeId in nodes)
             {
-                if (_nodeId == nodeId) continue;
-                try
-                {
-                    node.TryAddExternalBlock(fromNode.Chain);
-                }
-                catch
-                {
-                    throw new Exception($"Failed to add block to node {_nodeId}");
-                }
+                if (nodeId == sourceNodeId) continue;
+                await TryAddExternalChainAsync(fullChain, nodeId);
             }
         }
+
+        // Получение цепочки ноды с БД по nodeId
+        public async Task<List<Block>> GetChainAsync(string nodeId)
+        {
+            using var db = _dbFactory.CreateDbContext();
+            return await db.Blocks
+                .Where(b => b.NodeId == nodeId)
+                .Include(b => b.Transactions)
+                .OrderBy(b => b.Index)
+                .ToListAsync();
+        }
+
+        // список уникальных nodeId из БД
+        public async Task<List<string>> GetNodeIdsAsync()
+        {
+            using var db = _dbFactory.CreateDbContext();
+
+            return await db.Blocks
+                .Where(b => b.NodeId != null)  // фильтруем NULL genesis
+                .Select(b => b.NodeId!)
+                .Distinct()
+                .OrderBy(x => x)
+                .ToListAsync();
+        }
+
+        private void InitNodes(ApplicationDbContext db)
+        {
+            var nodeIds = new[] { "A", "B", "C" };
+
+            // есть ли генезис у сети
+            var globalGenesis = db.Blocks.FirstOrDefault(b => b.NodeId == null);
+            if (globalGenesis == null)
+                return;
+
+            foreach (var id in nodeIds)
+            {
+                // есть ли у ноды генезис
+                bool exists = db.Blocks.Any(b => b.NodeId == id && b.Index == 0);
+                if (exists)
+                    continue;
+
+                var nodeGenesis = new Block(index: 0, prevHash: "0", dateTime: new DateTime(2025, 01, 01, 00, 00, 00, DateTimeKind.Utc))
+                {
+                    NodeId = id,
+                    Difficulty = globalGenesis.Difficulty,
+                    MiningDurationMs = globalGenesis.MiningDurationMs,
+                    Nonce = globalGenesis.Nonce,
+                    Hash = globalGenesis.Hash
+                };
+
+                db.Blocks.Add(nodeGenesis);
+            }
+
+            db.SaveChanges();
+        }
+
+
+
+
 
 
 

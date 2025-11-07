@@ -10,34 +10,34 @@ namespace BlockChain_FP_ITStep.Controllers
 
         public static CancellationTokenSource? _cts;
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string nodeId = "A")
         {
             ViewBag.AlertMessage = TempData["AlertMessage"];
             ViewBag.AlertType = TempData["AlertType"];
 
-            var validatedBlocks = await _bcService.GetValidatedBlocksAsync();
-            var isSignatureValid = await _bcService.GetSignatureValidationAsync();
+            var validatedBlocks = await _bcService.GetValidatedBlocksAsync(nodeId);
+            var isSignatureValid = await _bcService.GetSignatureValidationAsync(nodeId);
 
             var model = validatedBlocks.Select((block, i) => new BlockValidationViewModel
             {
                 Block = block.Block,
-                IsValid = block.IsValid,                        // цепочка
-                IsSignatureValid = isSignatureValid[i].IsValid  // подпись
+                IsValid = block.IsValid,                            // цепочка
+                IsSignatureValid = isSignatureValid[i].IsValid      // подпись
             }).ToList();
 
             ViewBag.IsChainValid = model.All(b => b.IsValid);
             ViewBag.Difficulty = BlockChainService.Difficulty;
 
-            // TODO Add Public key to View ?
-            ViewBag.MempoolCount = _bcService.Mempool.Count;
-            ViewBag.Mempool = _bcService.Mempool;
-            ViewBag.Wallets = _bcService.Wallets.Values.ToList();
+            ViewBag.Mempool = _bcService.Mempool.Where(t => t.NodeId == nodeId).ToList();
+            ViewBag.MempoolCount = ((List<Transaction>)ViewBag.Mempool).Count;
 
-            // l6 ?
-            ViewBag.Balances = await _bcService.GetBalances(true);
+            ViewBag.Wallets = _bcService.Wallets.Values.ToList();
+            ViewBag.Balances = await _bcService.GetBalances(nodeId, true);
+
+            ViewBag.Nodes = await _bcService.GetNodeIdsAsync();     // список всех нод в БД
+            ViewBag.NodeId = nodeId;     // текущая выбранная нода
             return View(model);
         }
-
 
         // маршрут для генерации ключа
         [HttpGet]
@@ -80,19 +80,19 @@ namespace BlockChain_FP_ITStep.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> SearchByHash(string hash)
+        public async Task<IActionResult> SearchByHash(string hash, string nodeId = "A")
         {
             if (string.IsNullOrWhiteSpace(hash))
                 return RedirectToAction(nameof(Index));
 
-            var blocks = await _bcService.GetAllBlocksAsync();
+            var blocks = await _bcService.GetAllBlocksAsync(nodeId);
             var found = blocks.FirstOrDefault(b => b.Hash.Equals(hash, StringComparison.OrdinalIgnoreCase));    //  Ordinal -> Сравнивает побайтово символы, без учёта языка и культуры.  + IgnoreCase
 
             if (found == null)
             {
                 ViewBag.SearchMessage = "Block not found.";
-                ViewBag.IsChainValid = await _bcService.IsValidAsync();
-                var validatedBlocks = await _bcService.GetValidatedBlocksAsync();
+                ViewBag.IsChainValid = await _bcService.IsValidAsync(nodeId);
+                var validatedBlocks = await _bcService.GetValidatedBlocksAsync(nodeId);
                 return View("Index", validatedBlocks);
             }
 
@@ -116,23 +116,23 @@ namespace BlockChain_FP_ITStep.Controllers
             return RedirectToAction("Index");
         }
 
-        // Mining
-        [HttpPost]
-        public IActionResult StartMining(string privateKey)
-        {
-            if (string.IsNullOrWhiteSpace(privateKey))
-                return BadRequest("Private key required");
+        // Mining,  old ?
+        //[HttpPost]
+        //public IActionResult StartMining(string privateKey)
+        //{
+        //    if (string.IsNullOrWhiteSpace(privateKey))
+        //        return BadRequest("Private key required");
 
-            _cts = new CancellationTokenSource();
-            var progress = new Progress<int>(_ => { });
+        //    _cts = new CancellationTokenSource();
+        //    var progress = new Progress<int>(_ => { });
 
-            Task.Run(async () =>
-            {
-                await _bcService.MineAsync(privateKey, _cts.Token, progress);
-            });
+        //    Task.Run(async () =>
+        //    {
+        //        await _bcService.MineAsync(privateKey, _cts.Token, progress);
+        //    });
 
-            return Ok();
-        }
+        //    return Ok();
+        //}
 
         [HttpPost]
         public IActionResult StopMining()
@@ -142,17 +142,20 @@ namespace BlockChain_FP_ITStep.Controllers
         }
 
         [HttpPost]
-        public IActionResult RegisterWallet(string publicKeyXml, string displayName)
+        public IActionResult RegisterWallet(string publicKeyXml, string displayName, string nodeId)
         {
-            var wallet = _bcService.RegisterWallet(publicKeyXml, displayName);
-            return RedirectToAction("Index");
+            _bcService.RegisterWallet(publicKeyXml, displayName);
+
+            return RedirectToAction("Index", new { nodeId });
         }
 
+
         [HttpPost]
-        public IActionResult CreateTransaction(string fromAddress, string toAddress, decimal amount, decimal fee, string privateKey, string note)
+        public IActionResult CreateTransaction(string fromAddress, string toAddress, decimal amount, decimal fee, string privateKey, string note, string nodeId = "A")
         {
-            var tx = new Models.Transaction
+            var tx = new Transaction
             {
+                NodeId = nodeId,
                 FromAddress = fromAddress,
                 ToAddress = toAddress,
                 Amount = amount,
@@ -162,46 +165,48 @@ namespace BlockChain_FP_ITStep.Controllers
 
             tx.Signature = BlockChainService.SignPayload(tx.CanonicalPayload(), privateKey);
 
-            try
-            {
-                _bcService.CreateTransaction(tx);
+            try 
+            { 
+                _bcService.CreateTransaction(tx, nodeId); 
             }
-            catch (Exception ex)
-            {
-                TempData["Error"] = ex.Message;
+            catch (Exception ex) 
+            { 
+                TempData["Error"] = ex.Message; 
             }
 
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { nodeId });
         }
 
         [HttpPost]
-        public async Task<IActionResult> MinePending(string privateKey)
+        public async Task<IActionResult> MinePending(string privateKey, string nodeId = "A")
         {
-            try
-            {
-                await _bcService.MinePendingAsync(privateKey);
+            try 
+            { 
+                await _bcService.MinePendingAsync(privateKey, nodeId);
+                await _bcService.BroadcastChainAsync(nodeId);
             }
             catch (Exception ex)
             {
-                TempData["Error"] = ex.Message;
+                TempData["Error"] = ex.InnerException?.Message ?? ex.Message;
+                return RedirectToAction("Index", new { nodeId });
             }
 
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { nodeId });
         }
 
         [HttpPost]
-        public async  Task<IActionResult> DemoSetup()
+        public async Task<IActionResult> DemoSetup()
         {
-            //var (Ivan,  prvKey)  = _bcService.CreateWallet("Ivan");
-            //var (Taras, prvKey2) = _bcService.CreateWallet("Taras");
             var (Ivan, prvKey) = _bcService.CreateWallet("Ivan");
             var (Taras, prvKey2) = _bcService.CreateWallet("Taras");
+            var nodeId = "A";
 
             decimal amount = 7.0m;
             decimal fee = 0.5m;
 
-            var tx = new Models.Transaction
+            var tx = new Transaction
             {
+                NodeId = nodeId,
                 FromAddress = Ivan.Address,
                 ToAddress = Taras.Address,
                 Amount = amount,
@@ -209,33 +214,29 @@ namespace BlockChain_FP_ITStep.Controllers
                 Note = "Payment for services"
             };
 
-
-            for(int i = 0; i < 10; i++)
+            for (int i = 0; i < 10; i++)
             {
-                //await _bcService.MinePendingAsync(prvKey);
-                //await _bcService.MinePendingAsync(prvKey2);
-
-                await MinePending(prvKey);
-                await MinePending(prvKey2);
+                await MinePending(prvKey, nodeId);
+                await MinePending(prvKey2, nodeId);
             }
 
             var sig = BlockChainService.SignPayload(tx.CanonicalPayload(), prvKey);
-
             tx.Signature = sig;
 
             try
             {
-                _bcService.CreateTransaction(tx);
+                _bcService.CreateTransaction(tx, nodeId);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 TempData["Error"] = "Demo transaction failed.";
-                return RedirectToAction("Index");
+                return RedirectToAction("Index", new { nodeId });
             }
 
             TempData["Success"] = "Demo completed!";
-            return RedirectToAction("Index");
+            return RedirectToAction("Index", new { nodeId });
         }
+
 
 
     }

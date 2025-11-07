@@ -8,7 +8,7 @@ namespace BlockChain_FP_ITStep.Models
         [Key]
         public int Id { get; set; }
         public int BlockId { get; set; }
-
+        public string NodeId { get; set; } = "A";
         [Required]
         public string FromAddress { get; set; } = string.Empty;
         [Required]

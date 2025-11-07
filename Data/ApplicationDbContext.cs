@@ -19,15 +19,20 @@ namespace BlockChain_FP_ITStep.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Block>()
-                .HasIndex(b => b.Index);
 
+            modelBuilder.Entity<Block>(entity =>
+            {
+                entity.HasIndex(b => b.Index);
 
-            modelBuilder.Entity<Block>()
-                .HasMany(b => b.Transactions)
-                .WithOne(t => t.Block)
-                .HasForeignKey(t => t.BlockId)
-                .OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(b => new { b.NodeId, b.Index })
+                    .IsUnique();
+
+                entity.HasMany(b => b.Transactions)
+                    .WithOne(t => t.Block)
+                    .HasForeignKey(t => t.BlockId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+            });
 
 
 
