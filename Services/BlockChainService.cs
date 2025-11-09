@@ -18,8 +18,15 @@ namespace BlockChain_FP_ITStep.Services
        
         public Dictionary<string, Wallet> Wallets {   get; set; } = new();
         public List<Transaction> Mempool { get; set; } = new();
+
         public const decimal MinerReward = 1.0m;
 
+        // mining block difficulty adjustment
+        private const int TargetBlockTimeSeconds = 4;   // Время за которое мы хотим чтобы в среднем добывался блок в секундах.
+        private const int AdjustEveryBlocks = 5;         // Кол-во последних блоков, по которым будет оцениваться среднее время добычи блока, для достижении TargetBlockTimeSec
+        private const double Tolerance = 0.2;            // На сколько может быть отклонение во времени (0.2 = 20%),  тоесть время добычи блоков в пределах отклонения в 20% - допустимо.
+
+        private int maxDifficultyTest = 5;              // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
 
         public BlockChainService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<MiningHub> hub)
         {
@@ -124,6 +131,7 @@ namespace BlockChain_FP_ITStep.Services
             };
             newBlock.SetTransaction(txs);
             newBlock.Mine(Difficulty);
+            await AdjustDifficultyIfNeeded(nodeId);     // перерасчет сложночти для майнинга.  (по ноде или всем нодам? пока пусть будет по ноде)
 
             var privateParams = rsa.ExportParameters(true);
             newBlock.Sign(privateParams, publicKeyXml);
@@ -215,6 +223,12 @@ namespace BlockChain_FP_ITStep.Services
         {
             using var db = _dbFactory.CreateDbContext();
             return await db.Blocks.FirstOrDefaultAsync(b => b.Id == id);
+        }
+
+        public async Task<Block?> GetBlockByIdWithTransactionsAsync(int id)
+        {
+            using var db = _dbFactory.CreateDbContext();
+            return await db.Blocks.Include(b => b.Transactions).FirstOrDefaultAsync(b => b.Id == id);
         }
 
         public async Task<bool> EditBlockAsync(int index, string? signature = null)
@@ -555,7 +569,6 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
-
         public async Task BroadcastChainAsync(string sourceNodeId)
         {
             var fullChain = await GetChainAsync(sourceNodeId);
@@ -624,9 +637,81 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
+        //private void AdjustDifficultyIfNeeded()
+        //{
+        //    if (Chain.Count % AdjustEveryBlocks != 0 || Chain.Count < AdjustEveryBlocks)
+        //    {
+        //        return;
+        //    }
+
+        //    var recnt = Chain.Skip(1).TakeLast(AdjustEveryBlocks).ToList();
+
+        //    if (recnt.Count < AdjustEveryBlocks)
+        //    {
+        //        return;
+        //    }
+
+        //    var avgMs = recnt.Average(b => b.MiningDurationMs);
+        //    var targetMs = TargetBlockTimeSeconds * 1000;           // переводим ms в seconds
+
+        //    var lowerBound = targetMs * (1 - Tolerance);
+        //    var upperBound = targetMs * (1 + Tolerance);
+
+        //    if (avgMs < lowerBound)
+        //    {
+        //        Difficulty++;
+        //    }
+        //    else if (avgMs > upperBound && Difficulty > 1)
+        //    {
+        //        Difficulty--;
+        //    }
+
+        //    if (Difficulty < 1) Difficulty = 1;
+        //    if (Difficulty > 10) Difficulty = 10;
+        //}
 
 
+        // Перерасчёт сложности майнинга для конкретной ноды.
+        // После каждого блока (начиная с 5-го) считаем среднее время добычи последних N блоков
+        // и увеличиваем/уменьшаем сложность, чтобы удерживать среднее время около TargetBlockTimeSeconds.
+        private async Task AdjustDifficultyIfNeeded(string nodeId)
+        {
+            using var db = _dbFactory.CreateDbContext();
 
+            // Сколько блоков всего у ноды
+            int totalCount = await db.Blocks.CountAsync(b => b.NodeId == nodeId);
+
+            // Пока меньше чем AdjustEveryBlocks — не пересчитываем
+            if (totalCount < AdjustEveryBlocks)
+                return;
+
+            // Берём последние N блоков, исключая genesis (Index > 0)
+            var recentBlocks = await db.Blocks
+                .Where(b => b.NodeId == nodeId && b.Index > 0)
+                .OrderByDescending(b => b.Index)
+                .Take(AdjustEveryBlocks)
+                .ToListAsync();
+
+            if (recentBlocks.Count < AdjustEveryBlocks)
+                return;
+
+            var avgMs = recentBlocks.Average(b => b.MiningDurationMs);
+            var targetMs = TargetBlockTimeSeconds * 1000; // target в ms
+
+            var lowerBound = targetMs * (1 - Tolerance);
+            var upperBound = targetMs * (1 + Tolerance);
+
+            // Если блоки добывались быстрее нормы — увеличиваем сложность
+            if (avgMs < lowerBound)
+                Difficulty++;
+            // Если добывались медленнее нормы — уменьшаем
+            else if (avgMs > upperBound)
+                Difficulty--;
+
+            
+            if (Difficulty < 1) Difficulty = 1;
+            if (Difficulty > maxDifficultyTest) Difficulty = maxDifficultyTest;         // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
+        }
 
 
 

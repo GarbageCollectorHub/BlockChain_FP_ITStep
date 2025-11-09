@@ -12,7 +12,46 @@
 }
 else
 {
-    @Html.DisplayFor(m => m)   <!--  DisplayTemplate Block.cshtml -->
+    // DisplayTemplate Block.cshtml
+    @Html.DisplayFor(m => m)   
+
+    // Add block transactions display
+    @if (Model.Transactions != null && Model.Transactions.Count > 0)
+    {
+        <h4 class="mt-4">Transactions</h4>
+
+        <table class="table table-bordered table-sm">
+            <thead class="table-light">
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Amount</th>
+                    <th>Fee</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var tx in Model.Transactions)
+            {
+                var isCoinbase = tx.FromAddress == "COINBASE";
+                var rowClass = isCoinbase ? "table-warning" : "";
+
+                <tr class="@rowClass">
+                    <td>@tx.FromAddress</td>
+                    <td>@tx.ToAddress</td>
+                    <td>@tx.Amount</td>
+                    <td>@tx.Fee</td>
+                    <td>@tx.Note</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="mt-4 alert alert-info">No transactions in this block</div>
+    }
+
 }
 
 <a asp-action="Index" class="btn btn-secondary mt-3">← Back to list</a>

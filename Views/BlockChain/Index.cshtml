@@ -324,6 +324,9 @@ else
                 Mining Duration
             </th>
             <th>
+                @Html.DisplayNameFor(model => model.Block.Difficulty)
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.Block.PrevHash)
             </th>
             <th>
@@ -364,6 +367,11 @@ else
                     }
                     @* @($"{seconds:F2} s ({ms} ms)") *@
                     @($"{seconds:F2} s")
+                </td>
+
+                <!--  Difficulty -->
+                <td>
+                    @Html.DisplayFor(modelItem => item.Block.Difficulty)
                 </td>
                 <!--  PrevHash -->
                 <td title="@item.Block.PrevHash" onclick="copyToClipboard('@item.Block.PrevHash', 'PrevHash')" style="cursor:pointer;">
@@ -431,12 +439,12 @@ else
 
         // =================== SignalR Connection для Mining ===================
 
-        // Инициализируем соединение с хабом майнинга (MiningHub.cs на сервере)
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("/miningHub")    // URL хаба на сервере
-            .build();
+        // // Инициализируем соединение с хабом майнинга (MiningHub.cs на сервере)
+        // const connection = new signalR.HubConnectionBuilder()        СигналР остался в старом методе майнинга и на новый пока не переделывал и в сигнал Р открывает HTTP соединение и если блок долго добывается долго то браузер обрубит соединение -> разрыв, ошибка 0xc100000d, можно увеличит тайм аут но это костыль.
+        //     .withUrl("/miningHub")    // URL хаба на сервере
+        //     .build();
 
-        connection.start();
+        // connection.start();
 
         //============================================================================
 

@@ -102,8 +102,9 @@ namespace BlockChain_FP_ITStep.Controllers
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
-            var block = await _bcService.GetBlockByIdAsync(id);
+            var block = await _bcService.GetBlockByIdWithTransactionsAsync(id);
             if (block == null) return NotFound();
+
             return View(block);
         }
 
@@ -148,7 +149,6 @@ namespace BlockChain_FP_ITStep.Controllers
 
             return RedirectToAction("Index", new { nodeId });
         }
-
 
         [HttpPost]
         public IActionResult CreateTransaction(string fromAddress, string toAddress, decimal amount, decimal fee, string privateKey, string note, string nodeId = "A")
@@ -214,7 +214,7 @@ namespace BlockChain_FP_ITStep.Controllers
                 Note = "Payment for services"
             };
 
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 5; i++)
             {
                 await MinePending(prvKey, nodeId);
                 await MinePending(prvKey2, nodeId);
