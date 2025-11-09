@@ -11,7 +11,7 @@ namespace BlockChain_FP_ITStep.Models
         public int Id { get; set; }         // Id - первичный ключ БД (не влияет на хэш)
 
         public int Index { get; set; }      // Index - номер блока в цепочке, участвует в хэше и определяет порядок блоков
-        public string? NodeId { get; set; }   // Id Ноды )),  null тк у генезис блок обший для всех и они копируют его при созаднии ноды
+        public string? NodeId { get; set; }
 
         // Кол-во транзакций для UI.
         public int TxCount => Transactions.Count;
@@ -19,7 +19,7 @@ namespace BlockChain_FP_ITStep.Models
         public string Hash { get; set; }
         public DateTime Timestamp { get; set; }
 
-        public string? Signature { get; private set; } = "";   // Подпись блока 
+        public string? Signature { get; private set; } = "";   // Подпись блока // у генезис блока нету подписи.
         public string? PublicKeyXml { get; private set; }
 
         // l3 -> PoW
