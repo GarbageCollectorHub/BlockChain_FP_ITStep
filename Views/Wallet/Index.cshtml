@@ -1,0 +1,88 @@
+﻿@model List<BlockChain_FP_ITStep.Models.Transaction>
+
+@{
+    ViewData["Title"] = "Wallet";
+    var wallet = ViewBag.Wallet;
+    string address = ViewBag.Address;
+    decimal balance = ViewBag.Balance;
+}
+
+<div class="container py-4">
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex align-items-center">
+            <i class="bi bi-wallet2 me-2"></i>
+            <h5 class="mb-0">Wallet Details</h5>
+        </div>
+
+        <div class="card-body">
+
+            <div class="mb-3">
+                <span class="fw-bold">Address: </span>
+                <span class="badge bg-light text-dark border">
+                    @address
+                </span>
+
+                <button class="btn btn-sm btn-outline-secondary ms-2"
+                        onclick="navigator.clipboard.writeText('@address')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <span class="fw-semibold text-muted">Name</span>
+                    <div>@(wallet?.DisplayName ?? "-")</div>
+                </div>
+
+                <div class="col-md-4">
+                    <span class="fw-semibold text-muted">Balance</span>
+                    <div class="fs-5 fw-bold text-success">@balance</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    <h4 class="mb-3"><i class="bi bi-receipt me-2"></i>Transactions</h4>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">No transactions for this wallet yet.</div>
+    }
+    else
+    {
+        <table class="table table-hover table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Amount</th>
+                    <th>Fee</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var tx in Model)
+                {
+                    bool isCoinbase = tx.FromAddress == "COINBASE";
+                    var rowClass = isCoinbase ? "table-warning" : "";
+
+                    <tr class="@rowClass">
+                        <td>@tx.FromAddress</td>
+                        <td>@tx.ToAddress</td>
+                        <td class="fw-semibold">@tx.Amount</td>
+                        <td>@tx.Fee</td>
+                        <td>@tx.Note</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <a asp-controller="BlockChain" asp-action="Index"
+       class="btn btn-secondary mt-3">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>

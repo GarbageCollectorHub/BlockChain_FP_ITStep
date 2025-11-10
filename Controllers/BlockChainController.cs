@@ -201,8 +201,8 @@ namespace BlockChain_FP_ITStep.Controllers
             var (Taras, prvKey2) = _bcService.CreateWallet("Taras");
             var nodeId = "A";
 
-            decimal amount = 7.0m;
-            decimal fee = 0.5m;
+            decimal amount = 3.0m;
+            decimal fee = 0.1m;
 
             var tx = new Transaction
             {

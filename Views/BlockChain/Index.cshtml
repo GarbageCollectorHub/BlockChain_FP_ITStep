@@ -143,7 +143,7 @@ else
         <div>
             @if (wallets != null && wallets.Count > 0)
             {
-                <table class="table">
+                <table class="table table-hover">
                     <thead>
                         <th>Address</th>
                         <th>Name</th>
@@ -156,7 +156,19 @@ else
                         @foreach (var w in wallets)
                         {
                             <tr>
-                                <td>@w.Address</td>
+                                @*  Wallet adress, Clickable to Wallet Details page *@
+                                <td>
+                                    <a asp-controller="Wallet"
+                                       asp-action="Index"
+                                       asp-route-address="@w.Address"
+                                       class="text-body text-decoration-none"
+                                       style="cursor:pointer;"
+                                       onmouseover="this.classList.remove('text-body'); this.classList.add('text-primary')"
+                                       onmouseout="this.classList.add('text-body'); this.classList.remove('text-primary')">
+                                        @w.Address
+                                    </a>
+                                </td>
+
                                 <td>@w.DisplayName</td>
                                 @if (balances != null && balances.ContainsKey(w.Address))
                                 {
@@ -174,7 +186,7 @@ else
                                             : w.PublicKeyXml)
                                 </td>
 
-                                <td>@w.RegisteredAt.ToString("u")</td>
+                                <td>@w.RegisteredAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")</td>
                             </tr>
                         }
                     </tbody>
@@ -365,7 +377,6 @@ else
                         var ms = item.Block.MiningDurationMs;
                         var seconds = ms / 1000.0;
                     }
-                    @* @($"{seconds:F2} s ({ms} ms)") *@
                     @($"{seconds:F2} s")
                 </td>
 

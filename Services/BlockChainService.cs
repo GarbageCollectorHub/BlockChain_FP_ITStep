@@ -14,7 +14,7 @@ namespace BlockChain_FP_ITStep.Services
     {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly IHubContext<MiningHub> _hub;    // MiningHub (SignalR)
-        public static int Difficulty { get; set; } = 3;
+        public static int Difficulty { get; set; } = 1;     // Сложность для PoW алгоритма.
        
         public Dictionary<string, Wallet> Wallets {   get; set; } = new();
         public List<Transaction> Mempool { get; set; } = new();
@@ -637,40 +637,6 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
-        //private void AdjustDifficultyIfNeeded()
-        //{
-        //    if (Chain.Count % AdjustEveryBlocks != 0 || Chain.Count < AdjustEveryBlocks)
-        //    {
-        //        return;
-        //    }
-
-        //    var recnt = Chain.Skip(1).TakeLast(AdjustEveryBlocks).ToList();
-
-        //    if (recnt.Count < AdjustEveryBlocks)
-        //    {
-        //        return;
-        //    }
-
-        //    var avgMs = recnt.Average(b => b.MiningDurationMs);
-        //    var targetMs = TargetBlockTimeSeconds * 1000;           // переводим ms в seconds
-
-        //    var lowerBound = targetMs * (1 - Tolerance);
-        //    var upperBound = targetMs * (1 + Tolerance);
-
-        //    if (avgMs < lowerBound)
-        //    {
-        //        Difficulty++;
-        //    }
-        //    else if (avgMs > upperBound && Difficulty > 1)
-        //    {
-        //        Difficulty--;
-        //    }
-
-        //    if (Difficulty < 1) Difficulty = 1;
-        //    if (Difficulty > 10) Difficulty = 10;
-        //}
-
-
         // Перерасчёт сложности майнинга для конкретной ноды.
         // После каждого блока (начиная с 5-го) считаем среднее время добычи последних N блоков
         // и увеличиваем/уменьшаем сложность, чтобы удерживать среднее время около TargetBlockTimeSeconds.
@@ -714,6 +680,24 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
+        // return transactions by wallet
+        public async Task<List<Transaction>> GetTransactionsByWalletAsync(string address, string nodeId)
+        {
+            using var db = _dbFactory.CreateDbContext();
 
+            var blocks = await db.Blocks
+                .Where(b => b.NodeId == nodeId)
+                .Include(b => b.Transactions)
+                .OrderBy(b => b.Index)
+                .ToListAsync();
+
+            var txs = blocks
+                .SelectMany(b => b.Transactions)
+                .Where(t => t.FromAddress == address || t.ToAddress == address)
+                .OrderByDescending(t => t.Id)
+                .ToList();
+
+            return txs;
+        }
     }
 }
