@@ -25,6 +25,14 @@ namespace BlockChain_FP_ITStep.Controllers
                 IsSignatureValid = isSignatureValid[i].IsValid      // подпись
             }).ToList();
 
+            // добавляет reward к каждому блоку (для вывода инфы о блоках в UI)
+            foreach (var vm in model)
+                vm.Reward = _bcService.GetBlockReward(vm.Block.Index);
+
+            // reward для следующего блока
+            var lastIndex = model.Max(m => m.Block.Index);
+            ViewBag.CurrentReward = _bcService.GetBlockReward(lastIndex + 1);
+
             ViewBag.IsChainValid = model.All(b => b.IsValid);
             ViewBag.Difficulty = BlockChainService.Difficulty;
 
@@ -117,7 +125,7 @@ namespace BlockChain_FP_ITStep.Controllers
             return RedirectToAction("Index");
         }
 
-        // Mining,  old ?
+        // Old mining with Cancellation Token.
         //[HttpPost]
         //public IActionResult StartMining(string privateKey)
         //{

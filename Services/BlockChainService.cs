@@ -14,19 +14,25 @@ namespace BlockChain_FP_ITStep.Services
     {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
         private readonly IHubContext<MiningHub> _hub;    // MiningHub (SignalR)
-        public static int Difficulty { get; set; } = 1;     // Сложность для PoW алгоритма.
-       
+
+
         public Dictionary<string, Wallet> Wallets {   get; set; } = new();
         public List<Transaction> Mempool { get; set; } = new();
-
-        public const decimal MinerReward = 1.0m;
+        public static int Difficulty { get; set; } = 1;     // Сложность для PoW алгоритма.
+                                                            // 
+        // Halving
+        private const decimal BaseMinerReward = 1.0m;       // Base block reward
+        private const int HalvingBlockInterval = 5;         // Reward halves every N blocks
 
         // mining block difficulty adjustment
-        private const int TargetBlockTimeSeconds = 4;   // Время за которое мы хотим чтобы в среднем добывался блок в секундах.
-        private const int AdjustEveryBlocks = 5;         // Кол-во последних блоков, по которым будет оцениваться среднее время добычи блока, для достижении TargetBlockTimeSec
-        private const double Tolerance = 0.2;            // На сколько может быть отклонение во времени (0.2 = 20%),  тоесть время добычи блоков в пределах отклонения в 20% - допустимо.
+        private const int TargetBlockTimeSeconds = 4;       // Время за которое мы хотим чтобы в среднем добывался блок в секундах.
+        private const int AdjustEveryBlocks = 5;            // Кол-во последних блоков, по которым будет оцениваться среднее время добычи блока, для достижении TargetBlockTimeSec
+        private const double Tolerance = 0.2;               // На сколько может быть отклонение во времени (0.2 = 20%),  тоесть время добычи блоков в пределах отклонения в 20% - допустимо.
 
-        private int maxDifficultyTest = 5;              // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
+        private int maxDifficultyTest = 5;                  // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
+
+
+
 
         public BlockChainService(IDbContextFactory<ApplicationDbContext> dbFactory, IHubContext<MiningHub> hub)
         {
@@ -98,7 +104,6 @@ namespace BlockChain_FP_ITStep.Services
                 .OrderBy(b => b.Index)
                 .LastOrDefaultAsync();
 
-
             if (prevBlock == null)
                 throw new Exception($"Node {nodeId} has no genesis block!");
             //-----------
@@ -112,6 +117,14 @@ namespace BlockChain_FP_ITStep.Services
 
             decimal totalFee = Mempool.Where(t => t.NodeId == nodeId).Sum(t => t.Fee);
 
+            var newBlock = new Block((prevBlock?.Index ?? 0) + 1, prevBlock?.Hash ?? "0")
+            {
+                NodeId = nodeId
+            };
+
+            // Miner reward + halving logic (reward decreases every N blocks)
+            var minerReward = GetCurrentBlockReward(newBlock.Index);
+
             var txs = new List<Transaction>
             {
                 new Transaction
@@ -119,16 +132,12 @@ namespace BlockChain_FP_ITStep.Services
                     NodeId = nodeId,
                     FromAddress = "COINBASE",
                     ToAddress = minerAddress,
-                    Amount = MinerReward + totalFee
+                    Amount = minerReward + totalFee
                 }
             };
 
             txs.AddRange(Mempool.Where(t => t.NodeId == nodeId));
 
-            var newBlock = new Block((prevBlock?.Index ?? 0) + 1, prevBlock?.Hash ?? "0")
-            {
-                NodeId = nodeId
-            };
             newBlock.SetTransaction(txs);
             newBlock.Mine(Difficulty);
             await AdjustDifficultyIfNeeded(nodeId);     // перерасчет сложночти для майнинга.  (по ноде или всем нодам? пока пусть будет по ноде)
@@ -147,6 +156,7 @@ namespace BlockChain_FP_ITStep.Services
 
             return newBlock;
         }
+
 
         public async Task<long> AddBlockAsync(string data, string privateKeyXml, string nodeId)
         {
@@ -680,7 +690,7 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
-        // return transactions by wallet
+        // return transactions by wallet (address)
         public async Task<List<Transaction>> GetTransactionsByWalletAsync(string address, string nodeId)
         {
             using var db = _dbFactory.CreateDbContext();
@@ -698,6 +708,26 @@ namespace BlockChain_FP_ITStep.Services
                 .ToList();
 
             return txs;
+        }
+
+
+        // Returns halved mining reward based on block index (reward halves every HalvingBlockInterval blocks)
+        public decimal GetCurrentBlockReward(int newBlockIndex)
+        {
+            if (newBlockIndex < 1) return 0;
+
+            int halvings = (newBlockIndex / HalvingBlockInterval);
+            decimal reward = BaseMinerReward;
+            for (int i = 0; i < halvings; i++)
+            {
+                reward /= 2;
+            }
+            return reward;
+        }
+
+        public decimal GetBlockReward(int blockIndex)
+        {
+            return GetCurrentBlockReward(blockIndex);
         }
     }
 }

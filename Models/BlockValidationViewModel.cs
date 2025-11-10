@@ -5,5 +5,7 @@
         public Block Block { get; set; } = null!;
         public bool IsValid { get; set; }               // состояние цепочки
         public bool IsSignatureValid { get; set; }      // подпись RSA
+
+        public decimal Reward { get; set; }   // reward for this block
     }
 }

@@ -15,6 +15,10 @@
     var nodeId = @ViewBag.NodeId as string;
 }
 
+@* Blockchain Stats Styles .css  *@
+<link rel="stylesheet" href="~/css/blockchain-stats.css" />
+
+
 @* alert -> IsChain Valid  *@
 @if (ViewBag.IsChainValid == true)
 {
@@ -46,14 +50,15 @@ else
     TempData.Remove("Error");
 }
 
+@* Show Default Keys for easy test *@
 <div style="display:flex; flex-direction:row">
     <textarea rows="4">Private key -> @defaultPrivateKey </textarea>
     <textarea rows="4">Public  key -> @defaultPublicKey  </textarea>
 </div>
 
 
-@* Переключатель нод *@
-<form method="get" asp-action="Index" style="display:inline-block">
+@* Переключатель нод  *@
+@* <form method="get" asp-action="Index" style="display:inline-block">
     <label>Select node:</label>
 
     <select name="nodeId">
@@ -71,22 +76,53 @@ else
     </select>
 
     <button type="submit">Switch</button>
-</form>
+</form> *@
 
 
 <hr />
 
-<div>Difficulty @ViewBag.Difficulty</div>
+@* <div class="d-flex gap-3">
+    <h6 class="mb-0">Difficulty: @ViewBag.Difficulty</h6>
+    <h6 class="mb-0">Reward: @ViewBag.CurrentReward coin</h6>
+</div> *@
 
 
+<div class="blockchain-stats">
+    <div class="stats-container">
+        <div class="stat-card difficulty">
+            <div class="stat-icon">
+                <i class="bi bi-speedometer2"></i>
+            </div>
+            <div class="stat-label">Difficulty</div>
+            <div class="stat-value">
+                @ViewBag.Difficulty
+            </div>
+        </div>
+
+        <div class="stat-card reward">
+            <div class="stat-icon">
+                <i class="bi bi-currency-bitcoin"></i>
+            </div>
+            <div class="stat-label">Mining Reward</div>
+            <div class="stat-value">
+                @ViewBag.CurrentReward
+                <i class="bi bi-coin"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@* <hr />
 <div style="display:flex; flex-direction:row" style="margin:20px">
-   @*  DEMO SETUP BTN *@
+   <!--  DEMO SETUP BTN -->
     <form method="post" asp-action="DemoSetup" style="margin:20px">
         <input type="hidden" name="nodeId" value="@nodeId" />
         <input type="submit" value="START DEMO"/>
     </form>
 
-   @*  NEW START MINE *@
+    <!--  NEW START MINE -->
     <form method="post" asp-action="MinePending" style="margin:20px">
         <input type="hidden" name="nodeId" value="@nodeId" />
         <input type="text" name="privateKey" placeholder="Enter private key" />
@@ -119,17 +155,131 @@ else
 
 </div>
 
+<button type="button" class="btn btn-warning mb-2" data-bs-toggle="modal" data-bs-target="#keyModal">
+    Generate PK
+</button>
+<hr /> *@
+
+
+
+
+
+<hr />
+
+@* Control Panel Section *@
+<div class="control-panel">
+
+        <!--Node Selector -->
+    <form method="get" asp-action="Index" class="node-selector mb-2">
+        <label class="me-1">Node:</label>
+        <select name="nodeId">
+            @foreach (var n in ViewBag.Nodes)
+            {
+                <option value="@n" selected="@(n == ViewBag.NodeId ? "selected" : null)">@n</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Switch</button>
+    </form>
+    @* Generate Key Button *@
+    <div class="keygen-section">
+        <button type="button"
+                class="btn btn-keygen"
+                data-bs-toggle="modal"
+                data-bs-target="#keyModal">
+            <i class="bi bi-key-fill"></i>Generate Key Pair
+        </button>
+    </div>
+
+    @* Main Controls Grid *@
+    <div class="row g-3">
+
+        @* Mining Controls Card *@
+        <div class="col-lg-8">
+            <div class="control-card">
+                <div class="card-title">
+                    <i class="bi bi-minecart-loaded"></i>Mining Controls
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+
+                    @* Demo Setup *@
+                    <form method="post" asp-action="DemoSetup" class="d-inline">
+                        <input type="hidden" name="nodeId" value="@nodeId" />
+                        <button type="submit" class="btn btn-control-secondary btn-sm">
+                            <i class="bi bi-play-circle me-1"></i> Demo Setup
+                        </button>
+                    </form>
+
+                    @* Mining Form *@
+                    <form method="post" asp-action="MinePending" class="d-flex gap-2 flex-grow-1">
+                        <input type="hidden" name="nodeId" value="@nodeId" />
+                        <input type="text"
+                               name="privateKey"
+                               class="form-control form-control-sm form-control-modern flex-grow-1"
+                               placeholder="Enter private key for mining"
+                               style="max-width: 350px;" />
+                        <button type="submit" class="btn btn-control-primary btn-sm">
+                            <i class="bi bi-play-fill me-1"></i> Start Mining
+                        </button>
+                    </form>
+                </div>
+
+                @* Mining Progress Bar *@
+                <div id="miningProgress" class="mt-3" style="display:none;">
+                    <div class="progress" style="height: 6px; background: #e9ecef;">
+                        <div id="progressBarInline"
+                             class="progress-bar bg-success"
+                             role="progressbar"
+                             aria-valuemin="0"
+                             aria-valuemax="100"
+                             style="width: 0%;">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <small id="progressText" class="text-muted">⛏️ Mining block...</small>
+                        <small id="attemptsText" class="text-muted">0 attempts/s</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Difficulty Settings Card *@
+        <div class="col-lg-4">
+            <div class="control-card h-100">
+                <div class="card-title">
+                    <i class="bi bi-sliders"></i>Difficulty Settings
+                </div>
+
+                <form method="post" asp-action="SetDifficulty" novalidate>
+                    <input type="hidden" name="nodeId" value="@nodeId" />
+                    <div class="input-group input-group-sm">
+                        <input type="number"
+                               name="difficulty"
+                               class="form-control form-control-modern"
+                               placeholder="New difficulty"
+                               min="1"
+                               />
+                        <button type="submit" class="btn btn-control-primary">
+                            Apply
+                        </button>
+                    </div>
+                    <div class="current-value">
+                        Current difficulty: <strong>@ViewBag.Difficulty</strong>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr />
+
+
 
 <div class="mb-3">
-    <button type="button" class="btn btn-warning mb-2" data-bs-toggle="modal" data-bs-target="#keyModal">
-        Generate PK 
-    </button>
-
-
     <div class="row g-3">
 
         @* ========== Transactions, wallets, mempool ======================= *@
-        <hr />
         <div>
             <h3>Register Wallet</h3>
             <form method="post" asp-action="RegisterWallet">
@@ -339,6 +489,9 @@ else
                 @Html.DisplayNameFor(model => model.Block.Difficulty)
             </th>
             <th>
+                Reward
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.Block.PrevHash)
             </th>
             <th>
@@ -383,6 +536,10 @@ else
                 <!--  Difficulty -->
                 <td>
                     @Html.DisplayFor(modelItem => item.Block.Difficulty)
+                </td>
+                <!--  Block Mining Reward -->
+                <td>
+                    @Html.DisplayFor(modelItem => item.Reward)
                 </td>
                 <!--  PrevHash -->
                 <td title="@item.Block.PrevHash" onclick="copyToClipboard('@item.Block.PrevHash', 'PrevHash')" style="cursor:pointer;">
