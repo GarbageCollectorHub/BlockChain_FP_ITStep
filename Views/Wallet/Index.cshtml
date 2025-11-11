@@ -1,4 +1,4 @@
-﻿@model List<BlockChain_FP_ITStep.Models.Transaction>
+﻿@model List<BlockChain_FP_ITStep.Models.ViewModel.WalletTransactionViewModel>
 
 @{
     ViewData["Title"] = "Wallet";
@@ -60,24 +60,42 @@
                     <th>To</th>
                     <th>Amount</th>
                     <th>Fee</th>
+                    <th>Confirmations</th>
                     <th>Note</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var tx in Model)
                 {
-                    bool isCoinbase = tx.FromAddress == "COINBASE";
+                    bool isCoinbase = tx.Tx.FromAddress == "COINBASE";
                     var rowClass = isCoinbase ? "table-warning" : "";
 
+                    int confirmations = tx.BlockIndex == null
+                    ? 0
+                    : (ViewBag.LastBlockIndex - tx.BlockIndex.Value);
+
+                    confirmations = Math.Min(confirmations, 6);
+
                     <tr class="@rowClass">
-                        <td>@tx.FromAddress</td>
-                        <td>@tx.ToAddress</td>
-                        <td class="fw-semibold">@tx.Amount</td>
-                        <td>@tx.Fee</td>
-                        <td>@tx.Note</td>
+                        <td>@tx.Tx.FromAddress</td>
+                        <td>@tx.Tx.ToAddress</td>
+                        <td class="fw-semibold">@tx.Tx.Amount</td>
+                        <td>@tx.Tx.Fee</td>
+                        <td>
+                            @if (tx.BlockIndex == null)
+                            {
+                                <span class="text-warning">Pending</span>
+                            }
+                            else
+                            {
+                                @($"{confirmations}/6")
+                            }
+                        </td>
+                        <td>@tx.Tx.Note</td>
                     </tr>
                 }
             </tbody>
+
         </table>
     }
 

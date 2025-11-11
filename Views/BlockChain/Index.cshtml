@@ -81,11 +81,6 @@ else
 
 <hr />
 
-@* <div class="d-flex gap-3">
-    <h6 class="mb-0">Difficulty: @ViewBag.Difficulty</h6>
-    <h6 class="mb-0">Reward: @ViewBag.CurrentReward coin</h6>
-</div> *@
-
 
 <div class="blockchain-stats">
     <div class="stats-container">
@@ -111,56 +106,6 @@ else
         </div>
     </div>
 </div>
-
-
-
-@* <hr />
-<div style="display:flex; flex-direction:row" style="margin:20px">
-   <!--  DEMO SETUP BTN -->
-    <form method="post" asp-action="DemoSetup" style="margin:20px">
-        <input type="hidden" name="nodeId" value="@nodeId" />
-        <input type="submit" value="START DEMO"/>
-    </form>
-
-    <!--  NEW START MINE -->
-    <form method="post" asp-action="MinePending" style="margin:20px">
-        <input type="hidden" name="nodeId" value="@nodeId" />
-        <input type="text" name="privateKey" placeholder="Enter private key" />
-        <input type="submit" value="START MINE" />
-    </form>
-
-    <!-- progress bar -->
-    <div id="miningProgress" class="mt-2" style="display:none;">
-        <div class="progress" style="height: 8px;">
-            <div id="progressBarInline"
-                 class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-                 role="progressbar"
-                 aria-valuemin="0"
-                 aria-valuemax="100"
-                 style="width: 0%;">
-            </div>
-        </div>
-        <small id="progressText" class="text-muted">⛏️ Mining block...</small>
-        <small id="attemptsText" class="text-muted ms-2">0 attempts/s</small>
-    </div>
-
-    <!-- Difficulty setter -->
-    <form method="post" asp-action="SetDifficulty" style="margin:20px" novalidate>
-        <div class="input-group">
-            <input type="hidden" name="nodeId" value="@nodeId" />
-            <input type="text" name="difficulty" class="form-control" placeholder="set difficulty" />
-            <button type="submit" class="btn btn-primary">Set</button>
-        </div>
-    </form>
-
-</div>
-
-<button type="button" class="btn btn-warning mb-2" data-bs-toggle="modal" data-bs-target="#keyModal">
-    Generate PK
-</button>
-<hr /> *@
-
-
 
 
 
@@ -405,27 +350,6 @@ else
         <hr />
 
         @* ================================= *@
-
-@*         <div class="col-md-6">
-            <!-- add block -->
-            <form method="post" asp-action="Add" id="addBlockForm"  novalidate>
-                <div class="input-group">
-                    <input type="text" name="data" class="form-control" placeholder="Enter block data" value="test" required />
-                    <input type="password"
-                           id="privateKeyInput"
-                           name="privateKey"
-                           class="form-control"
-                           placeholder="Enter private key to sign block"
-                           value="@defaultPrivateKey"
-                           required 
-                    />
-                    <button class="btn btn-outline-secondary" type="button" id="toggleKeyBtn">
-                        <i class="bi bi-eye"></i>
-                    </button>
-                    <button type="submit" class="btn btn-success">Add block</button>
-                </div>
-            </form>
-        </div> *@
 
         <div class="col-md-6">
             <!-- search blcock by hash -->

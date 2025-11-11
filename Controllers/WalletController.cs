@@ -22,11 +22,16 @@ namespace BlockChain_FP_ITStep.Controllers
             var balances = await _bcService.GetBalances(nodeId, includeMempool: true);
             balances.TryGetValue(address, out var balance);
 
+            // Все транзакции кошелька (из блоков + mempool)
             var txs = await _bcService.GetTransactionsByWalletAsync(address, nodeId);
 
             var wallet = _bcService.Wallets.ContainsKey(address)
                 ? _bcService.Wallets[address]
                 : null;
+
+            // Индекс последнего блока для высчитвания confirmations(1/6..) у транзакции
+            var blocks = await _bcService.GetAllBlocksAsync(nodeId);
+            ViewBag.LastBlockIndex = blocks.Any() ? blocks.Max(b => b.Index) : 0;
 
             ViewBag.Address = address;
             ViewBag.Balance = balance;

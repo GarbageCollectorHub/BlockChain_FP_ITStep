@@ -1,6 +1,7 @@
 ﻿using BlockChain_FP_ITStep.Data;
 using BlockChain_FP_ITStep.Hubs;
 using BlockChain_FP_ITStep.Models;
+using BlockChain_FP_ITStep.Models.ViewModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
@@ -21,11 +22,11 @@ namespace BlockChain_FP_ITStep.Services
         public static int Difficulty { get; set; } = 1;     // Сложность для PoW алгоритма.
                                                             // 
         // Halving
-        private const decimal BaseMinerReward = 1.0m;       // Base block reward
-        private const int HalvingBlockInterval = 5;         // Reward halves every N blocks
+        private const decimal BaseMinerReward = 5.0m;       // Base block reward
+        private const int HalvingBlockInterval = 10;        // Reward halves every N blocks
 
         // mining block difficulty adjustment
-        private const int TargetBlockTimeSeconds = 4;       // Время за которое мы хотим чтобы в среднем добывался блок в секундах.
+        private const int TargetBlockTimeSeconds = 5;      // Время за которое мы хотим чтобы в среднем добывался блок в секундах.
         private const int AdjustEveryBlocks = 5;            // Кол-во последних блоков, по которым будет оцениваться среднее время добычи блока, для достижении TargetBlockTimeSec
         private const double Tolerance = 0.2;               // На сколько может быть отклонение во времени (0.2 = 20%),  тоесть время добычи блоков в пределах отклонения в 20% - допустимо.
 
@@ -691,24 +692,41 @@ namespace BlockChain_FP_ITStep.Services
 
 
         // return transactions by wallet (address)
-        public async Task<List<Transaction>> GetTransactionsByWalletAsync(string address, string nodeId)
+        public async Task<List<WalletTransactionViewModel>> GetTransactionsByWalletAsync(string address, string nodeId)
         {
             using var db = _dbFactory.CreateDbContext();
 
-            var blocks = await db.Blocks
+            // Транзакции из блокчейна
+            var chainTx = await db.Blocks
                 .Where(b => b.NodeId == nodeId)
                 .Include(b => b.Transactions)
                 .OrderBy(b => b.Index)
+                .SelectMany(b => b.Transactions.Select(t => new WalletTransactionViewModel
+                {
+                    Tx = t,
+                    BlockIndex = b.Index
+                }))
+                .Where(x => x.Tx.FromAddress == address || x.Tx.ToAddress == address)
                 .ToListAsync();
 
-            var txs = blocks
-                .SelectMany(b => b.Transactions)
+            // Транзакции в мемпуле (pending)
+            var memTx = Mempool
                 .Where(t => t.FromAddress == address || t.ToAddress == address)
-                .OrderByDescending(t => t.Id)
+                .Select(t => new WalletTransactionViewModel
+                {
+                    Tx = t,
+                    BlockIndex = null // pending
+                })
                 .ToList();
 
-            return txs;
+            // Объединяем
+            return chainTx
+                .Concat(memTx)
+                .OrderByDescending(x => x.BlockIndex ?? int.MaxValue) // pending вверху
+                .ThenByDescending(x => x.Tx.Id) // среди pending сортируем по Id
+                .ToList();
         }
+
 
 
         // Returns halved mining reward based on block index (reward halves every HalvingBlockInterval blocks)

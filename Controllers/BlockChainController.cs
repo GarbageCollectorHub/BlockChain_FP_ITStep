@@ -108,10 +108,14 @@ namespace BlockChain_FP_ITStep.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Details(int id)
+        public async Task<IActionResult> Details(int id, string nodeId = "A")
         {
             var block = await _bcService.GetBlockByIdWithTransactionsAsync(id);
             if (block == null) return NotFound();
+
+            // передаем индекс последнего блока для подсчёта подтверждений
+            var blocks = await _bcService.GetAllBlocksAsync(nodeId);
+            ViewBag.LastBlockIndex = blocks.Max(b => b.Index);
 
             return View(block);
         }

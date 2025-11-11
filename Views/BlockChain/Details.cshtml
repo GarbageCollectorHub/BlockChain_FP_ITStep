@@ -27,24 +27,41 @@ else
                     <th>To</th>
                     <th>Amount</th>
                     <th>Fee</th>
+                    <th>Confirmations</th>
                     <th>Note</th>
                 </tr>
             </thead>
             <tbody>
-            @foreach (var tx in Model.Transactions)
-            {
-                var isCoinbase = tx.FromAddress == "COINBASE";
-                var rowClass = isCoinbase ? "table-warning" : "";
+                @foreach (var tx in Model.Transactions)
+                {
+                    bool isCoinbase = tx.FromAddress == "COINBASE";
+                    var rowClass = isCoinbase ? "table-warning" : "";
 
-                <tr class="@rowClass">
-                    <td>@tx.FromAddress</td>
-                    <td>@tx.ToAddress</td>
-                    <td>@tx.Amount</td>
-                    <td>@tx.Fee</td>
-                    <td>@tx.Note</td>
-                </tr>
-            }
+                    int confirmations = ViewBag.LastBlockIndex - Model.Index + 1;
+                    confirmations = Math.Min(confirmations, 6); // максимум 6 cofirms (аналог бтс)
+
+                    <tr class="@rowClass">
+                        <td>@tx.FromAddress</td>
+                        <td>@tx.ToAddress</td>
+                        <td class="fw-semibold">@tx.Amount</td>
+                        <td>@tx.Fee</td>
+
+                        <td>
+                            @if (isCoinbase)
+                            {
+                                <span class="text-muted">--</span>
+                            }
+                            else
+                            {
+                                @($"{confirmations}/6")
+                            }
+                        </td>
+
+                        <td>@tx.Note</td>
+                    </tr>
+                }
             </tbody>
+
         </table>
     }
     else
