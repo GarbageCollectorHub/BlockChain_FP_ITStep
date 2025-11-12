@@ -8,6 +8,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
+/* ====  TODO / Ideas ====
+
+- Main Index Page -> Mining Progress Bar  ( TODO: пока что не работает из за нового метода майнинга и отключения  SignalR), хочу сделать кастомный Лоадер и вывод attempts но мб сигналР не лучший вариант из за возможного ТаймАут у него, при долгой добычи блока. + После почистить JS в Index page
+- BC Controller Index — refactor ViewBags into a single ViewModel
+- В BlockChainService в методе AdjustDifficultyIfNeeded стоит искуственное ограниче на Difficulty для тестов (поле сервиса maxDifficultyTest). Потом можно убрать.
+- На Index отображаются статические пары Private и Public Key, используемые для тестов... + там же Demo Setup btn
+- Wallets пока нужно "зарегистрировать", чтобы они добавились в словарь Wallets сервиса. На странице Index отображаются для информативности и тестов.
+
+
+ ====================================== */
+
+
 
 
 // DB context Factory

@@ -82,35 +82,53 @@ else
 <hr />
 
 
-@* Blockchain stats section *@
+@* Blockchain stats *@
 <div class="blockchain-stats">
     <div class="stats-container">
 
-        @* Difficulty Card *@
+        @* Network Info Card - Difficulty + Stats *@
         <div class="stat-card difficulty">
             <div class="stat-card-header">
                 <div class="stat-label-wrapper">
-                    <div class="stat-label">Difficulty</div>
-                    <div class="stat-sublabel">Mining complexity</div>
+                    <div class="stat-label">Network</div>
+                    <div class="stat-sublabel">Chain metrics</div>
                 </div>
                 <div class="stat-icon-container">
                     <i class="bi bi-speedometer2"></i>
                 </div>
             </div>
 
-            <div class="stat-value-container">
-                <div class="stat-main-value">
-                    @ViewBag.Difficulty
+            @* Difficulty - Horizontal Layout *@
+            <div class="difficulty-display">
+                <span class="difficulty-label">Difficulty</span>
+                <span class="difficulty-value">@ViewBag.Difficulty</span>
+            </div>
+
+            <div class="stat-divider"></div>
+
+            @* Network Stats - Compact *@
+            <div class="network-stats-list">
+                <div class="stat-item">
+                    <span class="stat-item-label">Total Blocks</span>
+                    <span class="stat-item-value">@(Model?.Count() ?? 0)</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Active Wallets</span>
+                    <span class="stat-item-value">@((ViewBag.Wallets as List<Wallet>)?.Count ?? 0)</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-item-label">Pending Txs</span>
+                    <span class="stat-item-value">@(ViewBag.MempoolCount ?? 0)</span>
                 </div>
             </div>
         </div>
 
-        @* Blockchain Metrics Card *@
+        @* Economy Card - Reward + Supply *@
         <div class="stat-card reward">
             <div class="stat-card-header">
                 <div class="stat-label-wrapper">
-                    <div class="stat-label">Blockchain</div>
-                    <div class="stat-sublabel">Network metrics</div>
+                    <div class="stat-label">Economy</div>
+                    <div class="stat-sublabel">Token metrics</div>
                 </div>
                 <div class="stat-icon-container">
                     <i class="bi bi-currency-bitcoin"></i>
@@ -118,6 +136,7 @@ else
             </div>
 
             <div class="stat-value-container">
+                <div class="stat-sublabel" style="opacity: 0.7; margin-bottom: 0.5rem;">Mining Reward</div>
                 <div class="stat-main-value">
                     @ViewBag.CurrentReward
                     <span class="currency-symbol">
@@ -147,26 +166,17 @@ else
 <hr />
 
 @* Control Panel Section *@
+@* Control Panel Section *@
 <div class="control-panel">
 
-        <!--Node Selector -->
-    <form method="get" asp-action="Index" class="node-selector mb-2">
-        <label class="me-1">Node:</label>
-        <select name="nodeId">
-            @foreach (var n in ViewBag.Nodes)
-            {
-                <option value="@n" selected="@(n == ViewBag.NodeId ? "selected" : null)">@n</option>
-            }
-        </select>
-        <button type="submit" class="btn btn-sm btn-outline-primary ms-2">Switch</button>
-    </form>
-    @* Generate Key Button *@
-    <div class="keygen-section">
+    @* Generate Key Button - Left Side *@
+    <div class="d-flex justify-content-start mb-4">
         <button type="button"
-                class="btn btn-keygen"
+                class="btn-keygen"
                 data-bs-toggle="modal"
                 data-bs-target="#keyModal">
-            <i class="bi bi-key-fill"></i>Generate Key Pair
+            <i class="bi bi-key-fill"></i>
+            <span>Generate Key Pair</span>
         </button>
     </div>
 
@@ -176,17 +186,41 @@ else
         @* Mining Controls Card *@
         <div class="col-lg-8">
             <div class="control-card">
-                <div class="card-title">
-                    <i class="bi bi-minecart-loaded"></i>Mining Controls
+
+                @* Header with Node Selector *@
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-3">
+                    <div class="card-title mb-0">
+                        <i class="bi bi-minecart-loaded"></i>Mining Controls
+                    </div>
+
+                    @* Node Selector *@
+                    <form method="get" asp-action="Index" class="node-selector">
+                        <label>NODE:</label>
+                        <select name="nodeId">
+                            @foreach (var n in ViewBag.Nodes as List<string>)
+                            {
+                                if (n == ViewBag.NodeId)
+                                {
+                                    <option value="@n" selected>@n</option>
+                                }
+                                else
+                                {
+                                    <option value="@n">@n</option>
+                                }
+                            }
+                        </select>
+                        <button type="submit">Switch</button>
+                    </form>
                 </div>
 
+                @* Mining Controls Content *@
                 <div class="d-flex flex-wrap gap-2 align-items-center">
 
                     @* Demo Setup *@
                     <form method="post" asp-action="DemoSetup" class="d-inline">
                         <input type="hidden" name="nodeId" value="@nodeId" />
-                        <button type="submit" class="btn btn-control-secondary btn-sm">
-                            <i class="bi bi-play-circle me-1"></i> Demo Setup
+                        <button type="submit" class="btn btn-demo-setup btn-sm">
+                            <i class="bi bi-lightning-charge-fill me-1"></i> Quick Demo
                         </button>
                     </form>
 
@@ -197,14 +231,14 @@ else
                                name="privateKey"
                                class="form-control form-control-sm form-control-modern flex-grow-1"
                                placeholder="Enter private key for mining"
-                               style="max-width: 350px;" />
+                               style="max-width: 400px;" />
                         <button type="submit" class="btn btn-control-primary btn-sm">
-                            <i class="bi bi-play-fill me-1"></i> Start Mining
+                            Start Mining
                         </button>
                     </form>
                 </div>
 
-                @* Mining Progress Bar *@
+                @* Mining Progress Bar  ( TODO: пока что не работает из за нового метода майнинга и отключения  SignalR), хочу сделать кастомный Лоадер и вывод attempts но мб сигналР не лучший вариант из за возможного ТаймАут у него, при долгой добычи блока. *@
                 <div id="miningProgress" class="mt-3" style="display:none;">
                     <div class="progress" style="height: 6px; background: #e9ecef;">
                         <div id="progressBarInline"
@@ -236,9 +270,9 @@ else
                         <input type="number"
                                name="difficulty"
                                class="form-control form-control-modern"
-                               placeholder="New difficulty"
+                               placeholder="Set difficulty"
                                min="1"
-                               />
+                               max="10" />
                         <button type="submit" class="btn btn-control-primary">
                             Apply
                         </button>
