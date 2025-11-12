@@ -82,31 +82,66 @@ else
 <hr />
 
 
+@* Blockchain stats section *@
 <div class="blockchain-stats">
     <div class="stats-container">
+
+        @* Difficulty Card *@
         <div class="stat-card difficulty">
-            <div class="stat-icon">
-                <i class="bi bi-speedometer2"></i>
+            <div class="stat-card-header">
+                <div class="stat-label-wrapper">
+                    <div class="stat-label">Difficulty</div>
+                    <div class="stat-sublabel">Mining complexity</div>
+                </div>
+                <div class="stat-icon-container">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
             </div>
-            <div class="stat-label">Difficulty</div>
-            <div class="stat-value">
-                @ViewBag.Difficulty
+
+            <div class="stat-value-container">
+                <div class="stat-main-value">
+                    @ViewBag.Difficulty
+                </div>
             </div>
         </div>
 
+        @* Blockchain Metrics Card *@
         <div class="stat-card reward">
-            <div class="stat-icon">
-                <i class="bi bi-currency-bitcoin"></i>
+            <div class="stat-card-header">
+                <div class="stat-label-wrapper">
+                    <div class="stat-label">Blockchain</div>
+                    <div class="stat-sublabel">Network metrics</div>
+                </div>
+                <div class="stat-icon-container">
+                    <i class="bi bi-currency-bitcoin"></i>
+                </div>
             </div>
-            <div class="stat-label">Mining Reward</div>
-            <div class="stat-value">
-                @ViewBag.CurrentReward
-                <i class="bi bi-coin"></i>
+
+            <div class="stat-value-container">
+                <div class="stat-main-value">
+                    @ViewBag.CurrentReward
+                    <span class="currency-symbol">
+                        <i class="bi bi-currency-bitcoin"></i>
+                    </span>
+                </div>
+            </div>
+
+            <div class="stat-secondary-info">
+                <div class="secondary-label">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <span>Circulating Supply</span>
+                </div>
+                <div class="secondary-value">
+                    @ViewBag.CirculatingSupply
+                    <span class="currency-symbol">
+                        <i class="bi bi-currency-bitcoin"></i>
+                    </span>
+                </div>
             </div>
         </div>
+
     </div>
 </div>
-
 
 
 <hr />

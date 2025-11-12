@@ -12,6 +12,8 @@ namespace BlockChain_FP_ITStep.Controllers
 
         public async Task<IActionResult> Index(string nodeId = "A")
         {
+            // TODO:  ViewBags to ViewModel !
+
             ViewBag.AlertMessage = TempData["AlertMessage"];
             ViewBag.AlertType = TempData["AlertType"];
 
@@ -28,6 +30,11 @@ namespace BlockChain_FP_ITStep.Controllers
             // добавляет reward к каждому блоку (для вывода инфы о блоках в UI)
             foreach (var vm in model)
                 vm.Reward = _bcService.GetBlockReward(vm.Block.Index);
+
+            // Circulating Supply (исключая genesis)
+            ViewBag.CirculatingSupply = model
+                .Where(m => m.Block.Index > 0)
+                .Sum(m => m.Reward);
 
             // reward для следующего блока
             var lastIndex = model.Max(m => m.Block.Index);
