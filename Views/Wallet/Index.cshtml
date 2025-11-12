@@ -68,13 +68,17 @@
                 @foreach (var tx in Model)
                 {
                     bool isCoinbase = tx.Tx.FromAddress == "COINBASE";
-                    var rowClass = isCoinbase ? "table-warning" : "";
 
                     int confirmations = tx.BlockIndex == null
                     ? 0
-                    : (ViewBag.LastBlockIndex - tx.BlockIndex.Value);
+                    : (ViewBag.LastBlockIndex - tx.BlockIndex.Value + 1);
 
                     confirmations = Math.Min(confirmations, 6);
+
+                    string rowClass =
+                    isCoinbase ? "table-warning" :                 // Coinbase -> Yellow
+                    confirmations >= 6 ? "table-success" :         // Fully confirmed -> Green
+                    "table-danger";                                // <6 or pending -> Red
 
                     <tr class="@rowClass">
                         <td>@tx.Tx.FromAddress</td>
@@ -82,9 +86,13 @@
                         <td class="fw-semibold">@tx.Tx.Amount</td>
                         <td>@tx.Tx.Fee</td>
                         <td>
-                            @if (tx.BlockIndex == null)
+                            @if (isCoinbase)
                             {
-                                <span class="text-warning">Pending</span>
+                                <span class="text-muted">--</span>
+                            }
+                            else if (tx.BlockIndex == null)
+                            {
+                                <span class="text-danger fw-bold">Pending</span>
                             }
                             else
                             {
