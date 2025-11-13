@@ -109,15 +109,21 @@ else
             @* Network Stats - Compact *@
             <div class="network-stats-list">
                 <div class="stat-item">
-                    <span class="stat-item-label">Total Blocks</span>
+                    <span class="stat-item-label">
+                        <i class="bi bi-box-seam me-1"></i> Total Blocks
+                    </span>
                     <span class="stat-item-value">@(Model?.Count() ?? 0)</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-item-label">Active Wallets</span>
+                    <span class="stat-item-label">
+                        <i class="bi bi-wallet2 me-1"></i> Active Wallets
+                    </span>
                     <span class="stat-item-value">@((ViewBag.Wallets as List<Wallet>)?.Count ?? 0)</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-item-label">Pending Txs</span>
+                    <span class="stat-item-label">
+                        <i class="bi bi-clock-history me-1"></i> Mempool Txs
+                    </span>
                     <span class="stat-item-value">@(ViewBag.MempoolCount ?? 0)</span>
                 </div>
             </div>

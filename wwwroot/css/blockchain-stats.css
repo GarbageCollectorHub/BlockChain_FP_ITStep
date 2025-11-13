@@ -147,7 +147,7 @@
         opacity: 0.8;
     }
 
-/* Compact Difficulty Display */
+/* Difficulty Display */
 .difficulty-display {
     display: flex;
     align-items: center;
@@ -259,7 +259,27 @@
     align-items: center;
     gap: 0.625rem;
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
 }
+
+    .btn-keygen::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+
+    .btn-keygen:hover::before {
+        width: 300px;
+        height: 300px;
+    }
 
     .btn-keygen:hover {
         transform: translateY(-2px);
@@ -269,6 +289,13 @@
 
     .btn-keygen i {
         font-size: 1.125rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .btn-keygen span {
+        position: relative;
+        z-index: 1;
     }
 
 .node-selector {
@@ -305,6 +332,9 @@
         font-size: 0.813rem;
         padding: 0.125rem 0.25rem;
         cursor: pointer;
+        background: linear-gradient(135deg, #f0f4ff 0%, #e8efff 100%);
+        border-radius: 4px;
+        padding: 0.25rem 0.5rem;
     }
 
         .node-selector select:focus {

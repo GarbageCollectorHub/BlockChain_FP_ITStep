@@ -22,7 +22,7 @@ namespace BlockChain_FP_ITStep.Services
         public static int Difficulty { get; set; } = 1;     // Сложность для PoW алгоритма.
                                                             // 
         // Halving
-        private const decimal BaseMinerReward = 5.0m;       // Base block reward
+        private const decimal BaseMinerReward = 50.0m;       // Base block reward
         private const int HalvingBlockInterval = 10;        // Reward halves every N blocks
 
         // mining block difficulty adjustment
