@@ -14,7 +14,7 @@ namespace BlockChain_FP_ITStep.Controllers
 
         // Wallet details page
         [HttpGet("/wallet/{address}")]
-        public async Task<IActionResult> Index(string address, string nodeId = "A")
+        public async Task<IActionResult> Details(string address, string nodeId = "A")
         {
             if (string.IsNullOrWhiteSpace(address))
                 return BadRequest("Wallet address required");

@@ -1,4 +1,5 @@
-﻿@model IEnumerable<BlockChain_FP_ITStep.Models.BlockValidationViewModel>
+﻿@using BlockChain_FP_ITStep.Models.Contracts
+@model IEnumerable<BlockChain_FP_ITStep.Models.BlockValidationViewModel>
 
 @{
     ViewData["Title"] = "Index";
@@ -13,6 +14,7 @@
     var wallets = ViewBag.Wallets as List<Wallet>;
     var balances = ViewBag.Balances as Dictionary<string, decimal>;
     var nodeId = @ViewBag.NodeId as string;
+    var contracts = ViewBag.Contracts as Dictionary<string, ISmartContract> ?? new Dictionary<string, ISmartContract>();
 }
 
 @* Blockchain Stats Styles .css  *@
@@ -55,28 +57,6 @@ else
     <textarea rows="4">Private key -> @defaultPrivateKey </textarea>
     <textarea rows="4">Public  key -> @defaultPublicKey  </textarea>
 </div>
-
-
-@* Переключатель нод  *@
-@* <form method="get" asp-action="Index" style="display:inline-block">
-    <label>Select node:</label>
-
-    <select name="nodeId">
-        @foreach (var n in ViewBag.Nodes)
-        {
-            if (n == ViewBag.NodeId)
-            {
-                <option value="@n" selected>@n</option>
-            }
-            else
-            {
-                <option value="@n">@n</option>
-            }
-        }
-    </select>
-
-    <button type="submit">Switch</button>
-</form> *@
 
 
 <hr />
@@ -325,29 +305,60 @@ else
                     <tbody>
                         @foreach (var w in wallets)
                         {
-                            <tr>
-                                @*  Wallet adress, Clickable to Wallet Details page *@
+                            <tr>                      
+                                @* if smart-contract address or regular wallet address *@
                                 <td>
-                                    <a asp-controller="Wallet"
-                                       asp-action="Index"
-                                       asp-route-address="@w.Address"
-                                       class="text-body text-decoration-none"
-                                       style="cursor:pointer;"
-                                       onmouseover="this.classList.remove('text-body'); this.classList.add('text-primary')"
-                                       onmouseout="this.classList.add('text-body'); this.classList.remove('text-primary')">
-                                        @w.Address
-                                    </a>
+                                    @if (contracts != null && contracts.ContainsKey(w.Address))
+                                    {
+                                        <a asp-controller="SmartContract"
+                                           asp-action="Details"
+                                           asp-route-address="@w.Address"
+                                           asp-route-nodeId="@nodeId"
+                                           class="text-body text-decoration-none"
+                                           style="cursor:pointer;"
+                                           onmouseover="this.classList.remove('text-body'); this.classList.add('text-primary')"
+                                           onmouseout="this.classList.add('text-body'); this.classList.remove('text-primary')">
+                                            @w.Address
+                                        </a>
+                                    }
+                                    @*  Wallet adress, Clickable to Wallet Details page *@
+                                    else
+                                    {
+                                        <a asp-controller="Wallet"
+                                           asp-action="Details"
+                                           asp-route-address="@w.Address"
+                                           class="text-body text-decoration-none"
+                                           style="cursor:pointer;"
+                                           onmouseover="this.classList.remove('text-body'); this.classList.add('text-primary')"
+                                           onmouseout="this.classList.add('text-body'); this.classList.remove('text-primary')">
+                                            @w.Address
+                                        </a>
+                                    }
                                 </td>
 
-                                <td>@w.DisplayName</td>
-                                @if (balances != null && balances.ContainsKey(w.Address))
-                                {
-                                    <td>@balances[w.Address]</td>
-                                }
-                                else
-                                {
-                                    <td>@("0")</td>
-                                }
+                                @*  Name *@
+                                <td>
+                                    @if (contracts != null && contracts.ContainsKey(w.Address))
+                                    {
+                                        <span style="color: green">(Contract)</span>
+                                    }
+                                    else
+                                    {
+                                        @w.DisplayName
+                                    }
+                                </td>
+
+                                @*  Balance *@
+                                <td>
+                                    @if (balances != null && balances.ContainsKey(w.Address))
+                                    {
+                                        @balances[w.Address]
+                                    }
+                                    else
+                                    {
+                                        @("0")
+                                    }
+                                </td>
 
 
                                 <td title="@w.PublicKeyXml" onclick="copyToClipboard('@w.PublicKeyXml', 'Public Key')" style="cursor:pointer;">

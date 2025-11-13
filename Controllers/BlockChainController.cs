@@ -51,6 +51,10 @@ namespace BlockChain_FP_ITStep.Controllers
 
             ViewBag.Nodes = await _bcService.GetNodeIdsAsync();     // список всех нод в БД
             ViewBag.NodeId = nodeId;     // текущая выбранная нода
+
+            // Добавим контракты для UI
+            ViewBag.Contracts = _bcService.Contracts;
+
             return View(model);
         }
 

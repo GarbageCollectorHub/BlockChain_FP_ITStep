@@ -1,6 +1,7 @@
 ﻿using BlockChain_FP_ITStep.Data;
 using BlockChain_FP_ITStep.Hubs;
 using BlockChain_FP_ITStep.Models;
+using BlockChain_FP_ITStep.Models.Contracts;
 using BlockChain_FP_ITStep.Models.ViewModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -14,23 +15,27 @@ namespace BlockChain_FP_ITStep.Services
     public class BlockChainService
     {
         private readonly IDbContextFactory<ApplicationDbContext> _dbFactory;
-        private readonly IHubContext<MiningHub> _hub;    // MiningHub (SignalR)
+        private readonly IHubContext<MiningHub> _hub;       // MiningHub (SignalR)
 
 
         public Dictionary<string, Wallet> Wallets {   get; set; } = new();
-        public List<Transaction> Mempool { get; set; } = new();
-        public static int Difficulty { get; set; } = 1;     // Сложность для PoW алгоритма.
-                                                            // 
+        public List<Transaction> Mempool { get; set; } = new(); 
+
+        // Smart Contract collection
+        public Dictionary<string, ISmartContract> Contracts { get;} = new Dictionary<string, ISmartContract>(StringComparer.OrdinalIgnoreCase);
+
+        // Сложность для PoW алгоритма.
+        public static int Difficulty { get; set; } = 1;     
         // Halving
-        private const decimal BaseMinerReward = 50.0m;       // Base block reward
+        private const decimal BaseMinerReward = 50.0m;      // Base block reward
         private const int HalvingBlockInterval = 10;        // Reward halves every N blocks
 
         // mining block difficulty adjustment
-        private const int TargetBlockTimeSeconds = 5;      // Время за которое мы хотим чтобы в среднем добывался блок в секундах.
+        private const int TargetBlockTimeSeconds = 5;       // Время за которое мы хотим чтобы в среднем добывался блок в секундах.
         private const int AdjustEveryBlocks = 5;            // Кол-во последних блоков, по которым будет оцениваться среднее время добычи блока, для достижении TargetBlockTimeSec
         private const double Tolerance = 0.2;               // На сколько может быть отклонение во времени (0.2 = 20%),  тоесть время добычи блоков в пределах отклонения в 20% - допустимо.
 
-        private int maxDifficultyTest = 5;                  // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
+        private int maxDifficultyTest = 4;                  // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
 
 
 
@@ -43,6 +48,16 @@ namespace BlockChain_FP_ITStep.Services
             using var db = _dbFactory.CreateDbContext();
             InitGenBlock(db);
             InitNodes(db);
+
+            // temporary test conctract initialization 
+            // TODO: временная инициализация тестового смарт-контракта TimeLock
+
+            var contractPrivateKeyXml = GeneratePrivateKeyXml();
+            var contractPublicKeyXml = GetPublicKeyFromPrivate(contractPrivateKeyXml)!;
+
+            var timeLockContractAddress = RegisterWallet(contractPublicKeyXml, "TestConctract").Address;
+            Contracts[timeLockContractAddress] = new TimeLockContract(timeLockContractAddress, 50);     // 50 - block index to unlock contract transaction
+            
         }
 
         private void InitGenBlock(ApplicationDbContext db)
@@ -92,6 +107,33 @@ namespace BlockChain_FP_ITStep.Services
             var required = transaction.Amount + transaction.Fee;
             if (fromBalance < required)
                 throw new Exception("Insufficient funds");
+
+
+            // --- Temporary Smart-contract validation ---
+            // TODO rework DB get -> nextBlockIndex -> every CreateTransaction()?
+
+            int nextBlockIndex;
+            using (var db = _dbFactory.CreateDbContext())
+            {
+                var maxIndex = db.Blocks
+                    .Where(b => b.NodeId == nodeId)
+                    .Select(b => (int?)b.Index)
+                    .Max() ?? 0;
+
+                nextBlockIndex = maxIndex + 1;
+            }
+
+            if (Contracts.TryGetValue(transaction.FromAddress, out var contractFrom))
+            {
+                contractFrom.ValidateTransaction(this, transaction, nextBlockIndex);
+            }
+
+            if (Contracts.TryGetValue(transaction.ToAddress, out var contractTo))
+            {
+                contractTo.ValidateTransaction(this, transaction, nextBlockIndex);
+            }
+            // ----------------------------------------- //
+
 
             Mempool.Add(transaction); // общий список, но каждая транзакция помечена nodeId
         }
@@ -690,7 +732,6 @@ namespace BlockChain_FP_ITStep.Services
             if (Difficulty > maxDifficultyTest) Difficulty = maxDifficultyTest;         // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
         }
 
-
         // return transactions by wallet (address)
         public async Task<List<WalletTransactionViewModel>> GetTransactionsByWalletAsync(string address, string nodeId)
         {
@@ -726,8 +767,6 @@ namespace BlockChain_FP_ITStep.Services
                 .ThenByDescending(x => x.Tx.Id) // среди pending сортируем по Id
                 .ToList();
         }
-
-
 
         // Returns halved mining reward based on block index (reward halves every HalvingBlockInterval blocks)
         public decimal GetCurrentBlockReward(int newBlockIndex)
