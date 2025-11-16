@@ -35,7 +35,7 @@ namespace BlockChain_FP_ITStep.Services
         private const int AdjustEveryBlocks = 5;            // Кол-во последних блоков, по которым будет оцениваться среднее время добычи блока, для достижении TargetBlockTimeSec
         private const double Tolerance = 0.2;               // На сколько может быть отклонение во времени (0.2 = 20%),  тоесть время добычи блоков в пределах отклонения в 20% - допустимо.
 
-        private int maxDifficultyTest = 4;                  // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
+        private int maxDifficultyTest = 3;                  // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
 
 
 
@@ -192,7 +192,15 @@ namespace BlockChain_FP_ITStep.Services
 
             db.Blocks.Add(newBlock);
             db.Transactions.AddRange(txs);
-            await db.SaveChangesAsync();
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("duplicate") == true)
+            {
+                throw new Exception("Block was not added - chain already extended by another block.");      // Блок отклонён - другой блок уже стоит на этом месте цепи. Мы не позволяем переписывать уже подтверждённые блоки
+            }
 
             // очищаем только транзакции этой ноды
             Mempool.RemoveAll(t => t.NodeId == nodeId);

@@ -17,6 +17,10 @@ builder.Services.AddControllersWithViews();
 - На Index отображаются статические пары Private и Public Key, используемые для тестов... + там же Demo Setup btn
 - Wallets пока нужно "зарегистрировать", чтобы они добавились в словарь Wallets сервиса. На странице Index отображаются для информативности и тестов.  ( + throw exception в MinePending() с меседжем если валлета там нету, и вывод меседжа в индекс через тоаст)
 
+UI/UX - Tasks:
+- Помічати у списку гаманців контрактні адреси (бейдж “contract” або тип).
+- Додати простий перегляд конфігурації контракту (для TimeLock — показати UnlockBlockIndex).  (!например В SmartContract Controller - Details action)
+- Показувати причину відхилення транзакції (toast/alert/TempData).
 
  ====================================== */
 
