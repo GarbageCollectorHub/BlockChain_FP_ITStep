@@ -30,7 +30,7 @@ namespace BlockChain_FP_ITStep.Services
         private const int AdjustEveryBlocks = 5;            // Кол-во последних блоков, по которым будет оцениваться среднее время добычи блока, для достижении TargetBlockTimeSec
         private const double Tolerance = 0.2;               // На сколько может быть отклонение во времени (0.2 = 20%),  тоесть время добычи блоков в пределах отклонения в 20% - допустимо.
 
-        private int maxDifficultyTest = 5;                  // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
+        private int maxDifficultyTest = 3;                  // Ограничение сложности в диапазон, тестовое, TODO потом убрать?
 
 
 
@@ -150,7 +150,15 @@ namespace BlockChain_FP_ITStep.Services
 
             db.Blocks.Add(newBlock);
             db.Transactions.AddRange(txs);
-            await db.SaveChangesAsync();
+
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("duplicate") == true)
+            {
+                throw new Exception("Block was not added - chain already extended by another block.");      // Блок отклонён - другой блок уже стоит на этом месте цепи. Мы не позволяем переписывать уже подтверждённые блоки
+            }
 
             // очищаем только транзакции этой ноды
             Mempool.RemoveAll(t => t.NodeId == nodeId);
@@ -481,10 +489,8 @@ namespace BlockChain_FP_ITStep.Services
         public async Task<bool> TryAddExternalChainAsync(List<Block> incoming, string nodeId)
         {
             using var db = _dbFactory.CreateDbContext();
-
+            // Текущая цепочка ноды
             var current = await GetChainAsync(nodeId);
-            if (incoming.Count <= current.Count)
-                return false;
 
             // Проверка целостности входящей цепочки
             for (int i = 0; i < incoming.Count; i++)
@@ -511,7 +517,14 @@ namespace BlockChain_FP_ITStep.Services
                 if (!cur.HashValidProof()) return false;
             }
 
-            // Сначала удаляем транзакции этой ноды
+            // принимаем входящую цепь только если она содержит больше работы (PoW консенсус)
+            var currentWork   = ComputeTotalWork(current);
+            var incomingWork  = ComputeTotalWork(incoming);
+            if (incomingWork <= currentWork)
+                return false;
+
+
+            // удаляем транзакции этой ноды
             db.Transactions.RemoveRange(
                 db.Transactions.Where(t => t.NodeId == nodeId)
             );
@@ -728,7 +741,6 @@ namespace BlockChain_FP_ITStep.Services
         }
 
 
-
         // Returns halved mining reward based on block index (reward halves every HalvingBlockInterval blocks)
         public decimal GetCurrentBlockReward(int newBlockIndex)
         {
@@ -747,5 +759,18 @@ namespace BlockChain_FP_ITStep.Services
         {
             return GetCurrentBlockReward(blockIndex);
         }
+
+        // Computes total Proof-of-Work of a chain. 
+        // Используем при сравнении цепей - принимаем только цепь с большей суммарной работой...
+        private static double ComputeTotalWork(List<Block> chain)
+        {
+            double totalWork = 0;
+
+            foreach (var block in chain)
+                totalWork += Math.Pow(2, block.Difficulty);
+
+            return totalWork;
+        }
+
     }
 }
