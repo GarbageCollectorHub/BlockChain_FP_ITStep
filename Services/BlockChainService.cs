@@ -526,15 +526,11 @@ namespace BlockChain_FP_ITStep.Services
             }
         }
 
-        // ===  Nodes les  ===
-
         public async Task<bool> TryAddExternalChainAsync(List<Block> incoming, string nodeId)
         {
             using var db = _dbFactory.CreateDbContext();
-
+            // Текущая цепочка ноды
             var current = await GetChainAsync(nodeId);
-            if (incoming.Count <= current.Count)
-                return false;
 
             // Проверка целостности входящей цепочки
             for (int i = 0; i < incoming.Count; i++)
@@ -561,7 +557,14 @@ namespace BlockChain_FP_ITStep.Services
                 if (!cur.HashValidProof()) return false;
             }
 
-            // Сначала удаляем транзакции этой ноды
+            // принимаем входящую цепь только если она содержит больше работы (PoW консенсус)
+            var currentWork = ComputeTotalWork(current);
+            var incomingWork = ComputeTotalWork(incoming);
+            if (incomingWork <= currentWork)
+                return false;
+
+
+            // удаляем транзакции этой ноды
             db.Transactions.RemoveRange(
                 db.Transactions.Where(t => t.NodeId == nodeId)
             );
@@ -793,6 +796,18 @@ namespace BlockChain_FP_ITStep.Services
         public decimal GetBlockReward(int blockIndex)
         {
             return GetCurrentBlockReward(blockIndex);
+        }
+
+        // Computes total Proof-of-Work of a chain. 
+        // Используем при сравнении цепей - принимаем только цепь с большей суммарной работой...
+        private static double ComputeTotalWork(List<Block> chain)
+        {
+            double totalWork = 0;
+
+            foreach (var block in chain)
+                totalWork += Math.Pow(2, block.Difficulty);
+
+            return totalWork;
         }
     }
 }
