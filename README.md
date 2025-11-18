@@ -18,12 +18,12 @@
 
 ---
 
-### 4. Staking Contract — user state (staked / reward / withdrawable)
+### 4. Staking Contract — user state (staked / reward / withdrawable - via Check btn) 
 <img src="screens/photo_2025-11-18_23-32-39.jpg" width="900"/>
 
 ---
 
-### 5. Penalty Staking Contract — deposit / withdraw
+### 5. Penalty Staking Contract — Stake / Unstake  ( with  Staked information for addr via Check btn)
 <img src="screens/photo_2025-11-18_23-32-41.jpg" width="900"/>
 
 ---
@@ -38,23 +38,23 @@
 
 ---
 
-### 8. Block details — full block info + transactions
+### 8. Block details — full block info + transactions + Type field for contracts - Stake/Unstake
 <img src="screens/photo_2025-11-18_23-32-59.jpg" width="900"/>
 
 ---
 
-### 9. PenaltyStaking withdraw transactions \ Unstake 
+### 9. PenaltyStaking unstake transactions with type "Unstake" 
 <img src="screens/photo_2025-11-18_23-33-01.jpg" width="900"/>
 
-### 9. Staking withdraw transactions \ Unstake 
+### 10. Staking withdraw transactions \ Unstake 
 <img src="screens/photo_2025-11-18_23-33-04.jpg" width="900"/>
 
 ---
 
-### 10. RSA key generator modal (private/public key)
+### 11. RSA key generator modal (private/public key)
 <img src="screens/photo_2025-11-18_23-33-07.jpg" width="900"/>
 
 ---
 
-### 11. Mining progress bar (SignalR UI)
-<img src="screens/mining_progress_bar.jpg" width="900"/>
+### 12. Wallets + Contracts ADDR Display
+<img src="screens/photo_2025-11-18_23-15-28.jpg" width="900"/>
