@@ -13,7 +13,7 @@
 else
 {
     // DisplayTemplate Block.cshtml
-    @Html.DisplayFor(m => m)   
+    @Html.DisplayFor(m => m)
 
     // Add block transactions display
     @if (Model.Transactions != null && Model.Transactions.Count > 0)
@@ -28,19 +28,45 @@ else
                     <th>Amount</th>
                     <th>Fee</th>
                     <th>Confirmations</th>
+                    <th>Type</th>     @* <-- добавили новую колонку *@
                     <th>Note</th>
                 </tr>
             </thead>
+
             <tbody>
                 @foreach (var tx in Model.Transactions)
                 {
                     bool isCoinbase = tx.FromAddress == "COINBASE";
-                    var rowClass = isCoinbase ? "table-warning" : "";
 
                     int confirmations = ViewBag.LastBlockIndex - Model.Index + 1;
-                    confirmations = Math.Min(confirmations, 6); // максимум 6 cofirms (аналог бтс)
+                    confirmations = Math.Min(confirmations, 6); // максимум 6 confirms (аналог BTC)
 
-                    <tr class="@rowClass">
+                    // Проверяем участие контракта
+                    bool isContractTx =
+                    tx.FromAddress == ViewBag.StakingAddress ||
+                    tx.ToAddress == ViewBag.StakingAddress ||
+                    tx.FromAddress == ViewBag.PenaltyStakingAddress ||
+                    tx.ToAddress == ViewBag.PenaltyStakingAddress;
+
+                    // Stake / Unstake
+                    string txType = "";
+                    if (tx.ToAddress == ViewBag.StakingAddress || tx.ToAddress == ViewBag.PenaltyStakingAddress)
+                        txType = "Stake";
+                    else if (tx.FromAddress == ViewBag.StakingAddress || tx.FromAddress == ViewBag.PenaltyStakingAddress)
+                        txType = "Unstake";
+
+                    // Мягкая подсветка строки контрактных транзакций
+                    string rowStyle = isContractTx ? "background-color:#f5faff;" : "";      // <- TODO rowStyle не вешается на tr, доделать потмо бекраунд по желанию.
+
+                    // Цвет текста
+                    string typeStyle = txType == "Stake"
+                    ? "color:#2fa56a;"
+                    : txType == "Unstake"
+                    ? "color:#c0392b;" 
+                    : "";
+
+
+                    <tr style="@rowStyle">
                         <td>@tx.FromAddress</td>
                         <td>@tx.ToAddress</td>
                         <td class="fw-semibold">@tx.Amount</td>
@@ -54,6 +80,13 @@ else
                             else
                             {
                                 @($"{confirmations}/6")
+                            }
+                        </td>
+
+                        <td>
+                            @if (isContractTx)
+                            {
+                                <span style="@typeStyle">@txType</span>
                             }
                         </td>
 
@@ -72,7 +105,6 @@ else
 }
 
 <a asp-action="Index" class="btn btn-secondary mt-3">← Back to list</a>
-
 
 
 @section Scripts {

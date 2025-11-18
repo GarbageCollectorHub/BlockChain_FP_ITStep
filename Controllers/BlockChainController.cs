@@ -1,4 +1,5 @@
 ﻿using BlockChain_FP_ITStep.Models;
+using BlockChain_FP_ITStep.Models.Contracts;
 using BlockChain_FP_ITStep.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -55,10 +56,13 @@ namespace BlockChain_FP_ITStep.Controllers
             // Добавим контракты для UI
             ViewBag.Contracts = _bcService.Contracts;
 
-            // Staking
+            // Staking - smart contract
             ViewBag.PrivateKeyStakingContract = _bcService.PrivateKeyXmlStakingContract;
             ViewBag.PublicKeyStakingContract = _bcService.PublicKeyXmlStakingContract;
             ViewBag.StakingAddress = _bcService.StakingContractAddress;
+
+            // Penalty Staking - smart contract
+            ViewBag.PenaltyStakingAddress = _bcService.PenaltyStakingContractAddress;
 
             return View(model);
         }
@@ -132,6 +136,9 @@ namespace BlockChain_FP_ITStep.Controllers
             // передаем индекс последнего блока для подсчёта подтверждений
             var blocks = await _bcService.GetAllBlocksAsync(nodeId);
             ViewBag.LastBlockIndex = blocks.Max(b => b.Index);
+
+            ViewBag.StakingAddress = _bcService.StakingContractAddress;
+            ViewBag.PenaltyStakingAddress = _bcService.PenaltyStakingContractAddress;
 
             return View(block);
         }
@@ -344,6 +351,98 @@ namespace BlockChain_FP_ITStep.Controllers
                 reward,
                 total,
                 formatted = $"{stake} staked, {reward} reward (total: {total})"
+            });
+        }
+
+
+        // Penalty Staking
+        [HttpPost]
+        public IActionResult PenaltyStake(string fromAddress, decimal amount, decimal fee, string privateKey, string nodeId)
+        {
+            try
+            {
+                if (amount <= 0)
+                    throw new Exception("Amount must be positive");
+                if (fee < 0)
+                    throw new Exception("Fee cannot be negative");
+
+                var tx = new Transaction
+                {
+                    NodeId = nodeId,
+                    FromAddress = fromAddress,
+                    ToAddress = _bcService.PenaltyStakingContractAddress,
+                    Amount = amount,
+                    Fee = fee,
+                    Note = "PenaltyStake deposit"
+                };
+
+                tx.Signature = BlockChainService.SignPayload(tx.CanonicalPayload(), privateKey);
+
+                _bcService.CreateTransaction(tx, nodeId);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+
+            return RedirectToAction("Index", new { nodeId });
+        }
+
+        [HttpPost]
+        public IActionResult PenaltyUnstake(string userAddress, decimal amount, string nodeId)
+        {
+            try
+            {
+                if (amount <= 0)
+                    throw new Exception("Amount must be positive");
+
+                var tx = new Transaction
+                {
+                    NodeId = nodeId,
+                    FromAddress = _bcService.PenaltyStakingContractAddress,
+                    ToAddress = userAddress,
+                    Amount = amount,
+                    Fee = 0,
+                    Note = "PenaltyStake withdraw"
+                };
+
+                tx.Signature = BlockChainService.SignPayload(
+                    tx.CanonicalPayload(),
+                    _bcService.PrivateKeyXmlPenaltyStakingContract
+                );
+
+                _bcService.CreateTransaction(tx, nodeId);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+
+            return RedirectToAction("Index", new { nodeId });
+        }
+
+        [HttpGet]
+        public IActionResult GetPenaltyStakeInfo(string address, string nodeId = "A")
+        {
+            var chain = _bcService.GetChainAsync(nodeId).Result;
+            var lastIndex = chain.Last().Index;
+
+            if (!_bcService.Contracts.TryGetValue(_bcService.PenaltyStakingContractAddress, out var contract))
+                return Json(new { });
+
+            if (contract is not PenaltyStakingContract psc)
+                return Json(new { });
+
+            var (stake, reward, total, startBlock, blocksPassed) =
+                psc.GetStakeInfo(address, lastIndex);
+
+            return Json(new
+            {
+                stake,
+                reward,
+                total,
+                startBlock,
+                blocksPassed
             });
         }
 

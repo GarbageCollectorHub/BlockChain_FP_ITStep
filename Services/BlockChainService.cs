@@ -25,14 +25,18 @@ namespace BlockChain_FP_ITStep.Services
         // Smart Contract collection
         public Dictionary<string, ISmartContract> Contracts { get;} = new Dictionary<string, ISmartContract>(StringComparer.OrdinalIgnoreCase);
 
+        // === Staking Smart-contract (temp states) ===
+        // TODO: модель для контрактов -> напр. Contractwallet -> str Adress, str PrivKey, str PubKey.  // и + контейнер для них?
+        public string StakingContractAddress { get; private set; }
+        public  string PrivateKeyXmlStakingContract {  get; private set; }
+        public string PublicKeyXmlStakingContract { get; private set; }
 
-        // === Staking Smart-contract (temp states) ===       
 
-        public string StakingContractAddress { get; set; }
-        public  string PrivateKeyXmlStakingContract {  get; set; }
-        public string PublicKeyXmlStakingContract { get; set; }
+        // === Penalty Staking Contract (temp states) ===  
+        public string PenaltyStakingContractAddress { get; private set; }
+        public string PrivateKeyXmlPenaltyStakingContract { get; private set; }
+        public string PublicKeyXmlPenaltyStakingContract { get; private set; }
 
-        // === END Staking === //
 
 
         // Сложность для PoW алгоритма.
@@ -60,16 +64,16 @@ namespace BlockChain_FP_ITStep.Services
             InitGenBlock(db);
             InitNodes(db);
 
-            // temporary test conctract initialization 
+            //temporary test conctract initialization
             // TODO: временная инициализация тестового смарт-контракта TimeLock
 
-            //var contractPrivateKeyXml = GeneratePrivateKeyXml();
-            //var contractPublicKeyXml = GetPublicKeyFromPrivate(contractPrivateKeyXml)!;
+            var contractPrivateKeyXml = GeneratePrivateKeyXml();
+            var contractPublicKeyXml = GetPublicKeyFromPrivate(contractPrivateKeyXml)!;
 
-            //var timeLockContractAddress = RegisterWallet(contractPublicKeyXml, "TestConctract").Address;
-            //Contracts[timeLockContractAddress] = new TimeLockContract(timeLockContractAddress, 50);     // 50 - block index to unlock contract transaction
+            var timeLockContractAddress = RegisterWallet(contractPublicKeyXml, "Test TimeLockContract").Address;
+            Contracts[timeLockContractAddress] = new TimeLockContract(timeLockContractAddress, 50);     // 50 - block index to unlock contract transaction
 
-            // temp: staking contract init
+            // === Staking-Contract init ===
             var rsaStakingContract = RSA.Create();
 
             PrivateKeyXmlStakingContract = rsaStakingContract.ToXmlString(true);
@@ -80,7 +84,19 @@ namespace BlockChain_FP_ITStep.Services
 
             decimal rewardPerBlock = 0.001m;        // 0.001 -> reward per staked coin for each block 
             int lockPeriod = 20;                    // 20 -> number of blocks during which coins remain locked
-            Contracts[StakingContractAddress] = new StakingContract(StakingContractAddress, rewardPerBlock, lockPeriod);      
+            Contracts[StakingContractAddress] = new StakingContract(StakingContractAddress, rewardPerBlock, lockPeriod);
+
+            // === Penalty Staking Contract ===
+            var penaltyRsa = RSA.Create();
+
+            PrivateKeyXmlPenaltyStakingContract = penaltyRsa.ToXmlString(true);
+            PublicKeyXmlPenaltyStakingContract = penaltyRsa.ToXmlString(false);
+
+            var penaltyWallet = RegisterWallet(PublicKeyXmlPenaltyStakingContract, "PenaltyStaking Contract");
+            PenaltyStakingContractAddress = penaltyWallet.Address;
+
+            Contracts[PenaltyStakingContractAddress] = new PenaltyStakingContract(PenaltyStakingContractAddress, rewardPerBlockPerToken: 0.001m, minLockBlocks: 20, earlyPenaltyPercent: 0.20m);   //  0.20m ->  pentlty 20%
+
 
         }
 
@@ -177,7 +193,6 @@ namespace BlockChain_FP_ITStep.Services
             Mempool.Add(transaction); // общий список, но каждая транзакция помечена nodeId
         }
 
-
         public (decimal stake, decimal reward, decimal total) GetStakeSummary(string userAddress, int currentBlock)
         {
             if (!Contracts.TryGetValue(StakingContractAddress, out var contract))
@@ -189,8 +204,6 @@ namespace BlockChain_FP_ITStep.Services
             var (stake, reward) = stakeContract.GetStakeInfo(userAddress, currentBlock);
             return (stake, reward, stake + reward);
         }
-
-
 
         public async Task<Block> MinePendingAsync(string privateKeyXml, string nodeId)
         {
@@ -261,7 +274,6 @@ namespace BlockChain_FP_ITStep.Services
 
             return newBlock;
         }
-
 
         public async Task<long> AddBlockAsync(string data, string privateKeyXml, string nodeId)
         {

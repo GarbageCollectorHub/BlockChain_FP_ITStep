@@ -37,6 +37,7 @@ else
     </div>
 }
 
+
 @if (ViewBag.SearchMessage != null)
 {
     <div class="alert alert-warning mt-3" role="alert">
@@ -341,7 +342,7 @@ else
                                 <td>
                                     @if (contracts != null && contracts.ContainsKey(w.Address))
                                     {
-                                        <span style="color: green">(Contract)</span>
+                                        <span style="color: green">(Contract) @w.DisplayName</span>
                                     }
                                     else
                                     {
@@ -382,6 +383,7 @@ else
 
 
         <hr />
+         <!-- Staking Smart Contract -->
         @if (!string.IsNullOrEmpty(stakingAddress))
         {
             <hr />
@@ -481,7 +483,7 @@ else
                                                placeholder="ADDR_..." />
 
                                         <button type="button"
-                                                class="btn btn-outline-secondary"
+                                                class="btn btn-control-primary"
                                                 onclick="checkStakeStatusForWithdraw()">
                                             Check
                                         </button>
@@ -510,6 +512,101 @@ else
                                             style="min-width: 180px;">
                                         Unstake
                                     </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        }
+
+
+        <hr />
+        <!-- Penalty Staking SmartContract -->
+        @if (!string.IsNullOrEmpty(ViewBag.PenaltyStakingAddress))
+        {
+            <hr />
+
+            <div class="control-card mt-4">
+
+                <div class="card-title d-flex align-items-center gap-2">
+                    <i class="bi bi-shield-exclamation" style="font-size: 1.2rem;"></i>
+                    <span>Penalty Staking Contract</span>
+                </div>
+
+                <div class="mb-3">
+                    <div class="small text-muted">Contract Address:</div>
+                    <div class="fw-bold">@ViewBag.PenaltyStakingAddress</div>
+                </div>
+
+                <div class="row g-4">
+
+                    <!-- Deposit -->
+                    <div class="col-md-6">
+                        <div class="control-card-inner">
+                            <div class="sub-card-title mb-2">Deposit into PenaltyStaking</div>
+
+                            <form method="post" asp-action="PenaltyStake">
+                                <input type="hidden" name="nodeId" value="@nodeId" />
+
+                                <label class="form-label">From Address</label>
+                                <input name="fromAddress" class="form-control form-control-modern mb-2" placeholder="ADDR_..." />
+
+                                <label class="form-label">Amount</label>
+                                <input name="amount" type="number" step="0.01" min="0" class="form-control form-control-modern mb-2" />
+
+                                <label class="form-label">Fee</label>
+                                <input name="fee" type="number" step="0.01" min="0" class="form-control form-control-modern mb-3" />
+
+                                <label class="form-label">Private Key</label>
+                                <input name="privateKey" class="form-control form-control-modern mb-3" />
+
+                                <div class="d-flex justify-content-center">
+                                    <button class="btn btn-control-primary px-5" style="min-width: 180px;">Stake</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Withdraw -->
+                    <div class="col-md-6">
+                        <div class="control-card-inner">
+                            <div class="sub-card-title mb-2">Withdraw from PenaltyStaking</div>
+
+                            <form method="post" asp-action="PenaltyUnstake">
+                                <input type="hidden" name="nodeId" value="@nodeId" />
+
+                                <label class="form-label">User Address</label>
+
+                                <div class="input-group mb-2">
+                                    <input id="ps_user"
+                                           name="userAddress"
+                                           class="form-control form-control-modern"
+                                           placeholder="ADDR_..." />
+
+                                    <button type="button"
+                                            class="btn btn-control-primary"
+                                            onclick="checkPenaltyStakeStatus()">
+                                        Check
+                                    </button>
+                                </div>
+
+                                <div id="ps_status"
+                                     class="small text-muted mb-3"
+                                     style="min-height:40px;">
+                                </div>
+
+                                <label class="form-label">Amount</label>
+                                <input name="amount"
+                                       type="number"
+                                       step="0.01"
+                                       min="0"
+                                       class="form-control form-control-modern mb-3"
+                                       placeholder="Amount" />
+
+                                <div class="d-flex justify-content-center">
+                                    <button class="btn btn-danger px-5" style="min-width: 180px;">Unstake</button>
                                 </div>
                             </form>
                         </div>
@@ -953,6 +1050,30 @@ else
                 });
         }
 
+        // Fetch + вывод состояния PenaltyStaking для указанного адреса
+        function checkPenaltyStakeStatus() {
+            const addr = document.getElementById("ps_user").value.trim();
+            const box = document.getElementById("ps_status");
+
+            if (!addr) {
+                box.innerHTML = "<span class='text-danger'>Enter address</span>";
+                return;
+            }
+
+            fetch(`/BlockChain/GetPenaltyStakeInfo?address=${addr}`)
+                .then(r => r.json())
+                .then(info => {
+                    box.innerHTML =
+                        `<b>Staked:</b> ${info.stake}<br>
+                         <b>Start block:</b> ${info.startBlock}<br>
+                         <b>Blocks passed:</b> ${info.blocksPassed}<br>
+                         <b>Reward:</b> ${info.reward}<br>
+                         <b>Total withdrawable:</b> ${info.total}`;
+                })
+                .catch(() => {
+                    box.innerHTML = "<span class='text-danger'>Error loading stake info</span>";
+                });
+        }
 
 
 
