@@ -1,4 +1,4 @@
-﻿@using BlockChain_FP_ITStep.Models.Contracts
+﻿@using BlockChain_FP_ITStep.Models.Contracts.Interfaces
 @model IEnumerable<BlockChain_FP_ITStep.Models.BlockValidationViewModel>
 
 @{
@@ -15,6 +15,8 @@
     var balances = ViewBag.Balances as Dictionary<string, decimal>;
     var nodeId = @ViewBag.NodeId as string;
     var contracts = ViewBag.Contracts as Dictionary<string, ISmartContract> ?? new Dictionary<string, ISmartContract>();
+    var stakingAddress = ViewBag.StakingAddress as string ?? string.Empty;
+
 }
 
 @* Blockchain Stats Styles .css  *@
@@ -152,7 +154,6 @@ else
 <hr />
 
 @* Control Panel Section *@
-@* Control Panel Section *@
 <div class="control-panel">
 
     @* Generate Key Button - Left Side *@
@@ -275,11 +276,11 @@ else
 <hr />
 
 
-
+@* ==========  Wallets, Mempool, Contracts =========== *@
 <div class="mb-3">
     <div class="row g-3">
 
-        @* ========== Transactions, wallets, mempool ======================= *@
+        
         <div>
             <h3>Register Wallet</h3>
             <form method="post" asp-action="RegisterWallet">
@@ -381,7 +382,145 @@ else
 
 
         <hr />
+        @if (!string.IsNullOrEmpty(stakingAddress))
+        {
+            <hr />
 
+            <div class="control-card mt-4">
+
+                <div class="card-title d-flex align-items-center gap-2">
+                    <i class="bi bi-cpu" style="font-size: 1.2rem;"></i>
+                    <span>Staking Contract</span>
+                </div>
+
+                <div class="mb-3">
+                    <div class="small text-muted">Contract Address:</div>
+                    <div class="fw-bold">@stakingAddress</div>
+                </div>
+
+                <div class="row g-4">
+
+                    <!-- Stake Form -->
+                    <div class="col-md-6">
+                        <div class="control-card-inner">
+
+                            <div class="sub-card-title mb-2">
+                                Deposit to Stake
+                            </div>
+
+                            <form method="post" asp-action="Stake">
+                                <input type="hidden" name="nodeId" value="@nodeId" />
+
+                                <div class="mb-2">
+                                    <label class="form-label">From Address</label>
+                                    <input name="fromAddress"
+                                           type="text"
+                                           class="form-control form-control-modern"
+                                           placeholder="ADDR_..." />
+                                </div>
+
+                                <div class="mb-2">
+                                    <label class="form-label">Amount</label>
+                                    <input name="amount"
+                                           type="number"
+                                           step="0.01"
+                                           min="0"
+                                           class="form-control form-control-modern"
+                                           placeholder="Amount" />
+                                </div>
+
+                                <div class="mb-2">
+                                    <label class="form-label">Fee</label>
+                                    <input name="fee"
+                                           type="number"
+                                           step="0.01"
+                                           min="0"
+                                           class="form-control form-control-modern"
+                                           placeholder="Fee" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Private Key</label>
+                                    <input name="privateKey"
+                                           type="text"
+                                           class="form-control form-control-modern"
+                                           placeholder="Private Key" />
+                                </div>
+
+                                <div class="d-flex justify-content-center mt-3">
+                                    <button type="submit"
+                                            class="btn btn-control-primary px-5"
+                                            style="min-width: 180px;">
+                                        Stake
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+
+                    <!-- Withdraw Form -->
+                    <div class="col-md-6">
+                        <div class="control-card-inner">
+
+                            <div class="sub-card-title mb-2">
+                                Withdraw from Stake
+                            </div>
+
+                            <form method="post" asp-action="WithdrawFromStake">
+                                <input type="hidden" name="nodeId" value="@nodeId" />
+
+                                <div class="mb-2">
+                                    <label class="form-label">User Address</label>
+
+                                    <div class="input-group">
+                                        <input name="userAddress"
+                                               id="withdrawUserAddress"
+                                               type="text"
+                                               class="form-control form-control-modern"
+                                               placeholder="ADDR_..." />
+
+                                        <button type="button"
+                                                class="btn btn-outline-secondary"
+                                                onclick="checkStakeStatusForWithdraw()">
+                                            Check
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Stake status output -->
+                                <div id="withdrawStakeInfo"
+                                     class="text-muted small"
+                                     style="min-height:40px;">
+                                </div>
+
+                                <div class="mb-3 mt-2">
+                                    <label class="form-label">Withdraw Amount</label>
+                                    <input name="amount"
+                                           type="number"
+                                           step="any"
+                                           min="0"
+                                           class="form-control form-control-modern"
+                                           placeholder="Amount" />
+                                </div>
+
+                                <div class="d-flex justify-content-center mt-3">
+                                    <button type="submit"
+                                            class="btn btn-danger px-5"
+                                            style="min-width: 180px;">
+                                        Unstake
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        }
+
+
+        <hr />
 
         @* Create Transaction and add to Memory pool *@
         <div>
@@ -791,6 +930,28 @@ else
 
 
 
+        // Stake Info fetch
+        function checkStakeStatusForWithdraw() {
+            const addr = document.getElementById("withdrawUserAddress").value.trim();
+            const output = document.getElementById("withdrawStakeInfo");
+
+            if (!addr) {
+                output.innerHTML = "<span class='text-danger'>Enter address</span>";
+                return;
+            }
+
+            fetch(`/BlockChain/GetStakeInfo?userAddress=${addr}`)
+                .then(r => r.json())
+                .then(res => {
+                    output.innerHTML =
+                        `<b>Staked:</b> ${res.stake}<br>
+                         <b>Reward:</b> ${res.reward}<br>
+                         <b>Total withdrawable:</b> ${res.total}`;
+                })
+                .catch(() => {
+                    output.innerHTML = "<span class='text-danger'>Error loading stake info</span>";
+                });
+        }
 
 
 

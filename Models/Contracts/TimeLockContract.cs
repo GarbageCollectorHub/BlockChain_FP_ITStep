@@ -1,4 +1,5 @@
-﻿using BlockChain_FP_ITStep.Services;
+﻿using BlockChain_FP_ITStep.Models.Contracts.Interfaces;
+using BlockChain_FP_ITStep.Services;
 
 namespace BlockChain_FP_ITStep.Models.Contracts
 {

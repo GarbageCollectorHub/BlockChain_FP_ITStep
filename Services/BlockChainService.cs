@@ -2,6 +2,7 @@
 using BlockChain_FP_ITStep.Hubs;
 using BlockChain_FP_ITStep.Models;
 using BlockChain_FP_ITStep.Models.Contracts;
+using BlockChain_FP_ITStep.Models.Contracts.Interfaces;
 using BlockChain_FP_ITStep.Models.ViewModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,16 @@ namespace BlockChain_FP_ITStep.Services
 
         // Smart Contract collection
         public Dictionary<string, ISmartContract> Contracts { get;} = new Dictionary<string, ISmartContract>(StringComparer.OrdinalIgnoreCase);
+
+
+        // === Staking Smart-contract (temp states) ===       
+
+        public string StakingContractAddress { get; set; }
+        public  string PrivateKeyXmlStakingContract {  get; set; }
+        public string PublicKeyXmlStakingContract { get; set; }
+
+        // === END Staking === //
+
 
         // Сложность для PoW алгоритма.
         public static int Difficulty { get; set; } = 1;     
@@ -52,12 +63,25 @@ namespace BlockChain_FP_ITStep.Services
             // temporary test conctract initialization 
             // TODO: временная инициализация тестового смарт-контракта TimeLock
 
-            var contractPrivateKeyXml = GeneratePrivateKeyXml();
-            var contractPublicKeyXml = GetPublicKeyFromPrivate(contractPrivateKeyXml)!;
+            //var contractPrivateKeyXml = GeneratePrivateKeyXml();
+            //var contractPublicKeyXml = GetPublicKeyFromPrivate(contractPrivateKeyXml)!;
 
-            var timeLockContractAddress = RegisterWallet(contractPublicKeyXml, "TestConctract").Address;
-            Contracts[timeLockContractAddress] = new TimeLockContract(timeLockContractAddress, 50);     // 50 - block index to unlock contract transaction
-            
+            //var timeLockContractAddress = RegisterWallet(contractPublicKeyXml, "TestConctract").Address;
+            //Contracts[timeLockContractAddress] = new TimeLockContract(timeLockContractAddress, 50);     // 50 - block index to unlock contract transaction
+
+            // temp: staking contract init
+            var rsaStakingContract = RSA.Create();
+
+            PrivateKeyXmlStakingContract = rsaStakingContract.ToXmlString(true);
+            PublicKeyXmlStakingContract  = rsaStakingContract.ToXmlString(false);
+
+            var stakingWallet = RegisterWallet(PublicKeyXmlStakingContract, "Staking Contract Wallet");
+            StakingContractAddress = stakingWallet.Address;
+
+            decimal rewardPerBlock = 0.001m;        // 0.001 -> reward per staked coin for each block 
+            int lockPeriod = 20;                    // 20 -> number of blocks during which coins remain locked
+            Contracts[StakingContractAddress] = new StakingContract(StakingContractAddress, rewardPerBlock, lockPeriod);      
+
         }
 
         private void InitGenBlock(ApplicationDbContext db)
@@ -101,12 +125,23 @@ namespace BlockChain_FP_ITStep.Services
             if (!rsa.VerifyData(payload, sig, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
                 throw new Exception("Invalid Transaction Signature");
 
-            var balances = GetBalances(nodeId, includeMempool: false).Result;               // include memorypool -> false 
-            balances.TryGetValue(transaction.FromAddress, out var fromBalance);
+            if (transaction.Amount < 0 || transaction.Fee < 0)
+                throw new Exception("Amount and Fee must be non-negative");
 
-            var required = transaction.Amount + transaction.Fee;
-            if (fromBalance < required)
-                throw new Exception("Insufficient funds");
+            // является ли отправитель контрактом или COINBASE
+            bool isFromContract = Contracts.ContainsKey(transaction.FromAddress);
+            bool isCoinbase = string.Equals(transaction.FromAddress, "COINBASE", StringComparison.OrdinalIgnoreCase);
+
+            // теперь баланс проверяется только для обычных кошельков
+            if (!isFromContract && !isCoinbase)
+            {
+                var balances = GetBalances(nodeId, includeMempool: false).Result;               // include memorypool -> false 
+                balances.TryGetValue(transaction.FromAddress, out var fromBalance);
+
+                var required = transaction.Amount + transaction.Fee;
+                if (fromBalance < required)
+                    throw new Exception("Insufficient funds");
+            }
 
 
             // --- Temporary Smart-contract validation ---
@@ -125,18 +160,37 @@ namespace BlockChain_FP_ITStep.Services
 
             if (Contracts.TryGetValue(transaction.FromAddress, out var contractFrom))
             {
-                contractFrom.ValidateTransaction(this, transaction, nextBlockIndex);
+                // контракт-отправитель (например, staking withdraw) может отклонить или модифицировать транзакцию
+                var ok = contractFrom.ValidateTransaction(this, transaction, nextBlockIndex);
+                if (!ok) return;
             }
 
             if (Contracts.TryGetValue(transaction.ToAddress, out var contractTo))
             {
-                contractTo.ValidateTransaction(this, transaction, nextBlockIndex);
+                // контракт-получатель (deposit) тоже решает, принимать операцию или нет
+                var ok = contractTo.ValidateTransaction(this, transaction, nextBlockIndex);
+                if (!ok) return;
             }
             // ----------------------------------------- //
 
 
             Mempool.Add(transaction); // общий список, но каждая транзакция помечена nodeId
         }
+
+
+        public (decimal stake, decimal reward, decimal total) GetStakeSummary(string userAddress, int currentBlock)
+        {
+            if (!Contracts.TryGetValue(StakingContractAddress, out var contract))
+                return (0, 0, 0);
+
+            if (contract is not StakingContract stakeContract)
+                return (0, 0, 0);
+
+            var (stake, reward) = stakeContract.GetStakeInfo(userAddress, currentBlock);
+            return (stake, reward, stake + reward);
+        }
+
+
 
         public async Task<Block> MinePendingAsync(string privateKeyXml, string nodeId)
         {

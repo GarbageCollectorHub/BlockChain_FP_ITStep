@@ -55,6 +55,11 @@ namespace BlockChain_FP_ITStep.Controllers
             // Добавим контракты для UI
             ViewBag.Contracts = _bcService.Contracts;
 
+            // Staking
+            ViewBag.PrivateKeyStakingContract = _bcService.PrivateKeyXmlStakingContract;
+            ViewBag.PublicKeyStakingContract = _bcService.PublicKeyXmlStakingContract;
+            ViewBag.StakingAddress = _bcService.StakingContractAddress;
+
             return View(model);
         }
 
@@ -260,6 +265,87 @@ namespace BlockChain_FP_ITStep.Controllers
             return RedirectToAction("Index", new { nodeId });
         }
 
+
+        // Staking
+        [HttpPost]
+        public IActionResult Stake(string fromAddress, decimal amount, decimal fee, string privateKey, string nodeId)
+        {
+            try
+            {
+                if (amount <= 0)
+                    throw new Exception("Stake amount must be positive");
+
+                if (fee < 0)
+                    throw new Exception("Fee cannot be negative");
+
+                var tx = new Transaction
+                {
+                    FromAddress = fromAddress,
+                    ToAddress = _bcService.StakingContractAddress,
+                    Amount = amount,
+                    Fee = fee,
+                    Note = "Stake tokens",
+                    NodeId = nodeId
+                };
+
+                tx.Signature = BlockChainService.SignPayload(tx.CanonicalPayload(), privateKey);
+
+                _bcService.CreateTransaction(tx, nodeId);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+
+            return RedirectToAction("Index", new { nodeId });
+        }
+
+        [HttpPost]
+        public IActionResult WithdrawFromStake(string userAddress, decimal amount, string nodeId)
+        {
+            try
+            {
+                var tx = new Transaction
+                {
+                    FromAddress = _bcService.StakingContractAddress,
+                    ToAddress = userAddress,
+                    Amount = amount,
+                    Fee = 0m,
+                    Note = "Withdraw from stake",
+                    NodeId = nodeId
+                };
+
+                tx.Signature = BlockChainService.SignPayload(
+                    tx.CanonicalPayload(),
+                    _bcService.PrivateKeyXmlStakingContract
+                );
+
+                _bcService.CreateTransaction(tx, nodeId);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = ex.Message;
+            }
+
+            return RedirectToAction("Index", new { nodeId });
+        }
+
+        [HttpGet]
+        public IActionResult GetStakeInfo(string userAddress, string nodeId = "A")
+        {
+            var chain = _bcService.GetChainAsync(nodeId).Result;
+            var lastIndex = chain.Last().Index;
+
+            var (stake, reward, total) = _bcService.GetStakeSummary(userAddress, lastIndex);
+
+            return Json(new
+            {
+                stake,
+                reward,
+                total,
+                formatted = $"{stake} staked, {reward} reward (total: {total})"
+            });
+        }
 
 
     }

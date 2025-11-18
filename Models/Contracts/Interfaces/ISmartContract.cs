@@ -1,6 +1,6 @@
 ﻿using BlockChain_FP_ITStep.Services;
 
-namespace BlockChain_FP_ITStep.Models.Contracts
+namespace BlockChain_FP_ITStep.Models.Contracts.Interfaces
 {
     public interface ISmartContract
     {
